@@ -1,0 +1,115 @@
+/* === FUENTE GLOBAL === */
+body, div, p, span, input, button, label {
+    font-family: 'Segoe UI', sans-serif !important;
+}
+
+/* === BOTONES === */
+.stButton > button {
+    background-color: #009739;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0.5em 1.2em;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.stButton > button:hover {
+    background-color: #007a2f;
+    color: white;
+}
+
+/* === SELECTBOX === */
+.stSelectbox div[data-baseweb="select"] {
+    background-color: white;
+    border: 2px solid #009739;
+    border-radius: 8px;
+}
+.stSelectbox div[data-baseweb="select"] * {
+    font-family: "Segoe UI", sans-serif;
+}
+
+/* === RADIO === */
+.stRadio > div {
+    background-color: #f2fdf5;
+    border: 1px solid #009739;
+    border-radius: 10px;
+    padding: 0.5em;
+}
+.stRadio label {
+    font-weight: bold;
+    color: #009739;
+}
+
+/* === CHECKBOX === */
+.stCheckbox {
+    background-color: #f2fdf5;
+    border-radius: 10px;
+    padding: 0.3em 0.6em;
+    margin-bottom: 0.5em;
+    border: 1px solid #009739;
+}
+.stCheckbox > label {
+    color: #009739;
+    font-weight: bold;
+}
+
+/* === INPUTS DE TEXTO Y FECHAS === */
+.stTextInput input,
+.stDateInput input,
+.stNumberInput input,
+.stTextArea textarea {
+    border: 2px solid #009739;
+    border-radius: 8px;
+    padding: 0.4em;
+    font-size: 1rem;
+    background-color: #f9fffa;
+    font-family: "Segoe UI", sans-serif;
+}
+
+/* === LABELS === */
+label, .stTextInput label, .stNumberInput label, .stTextArea label {
+    color: #009739 !important;
+    font-weight: bold;
+}
+
+/* === TITULOS === */
+h1, h2, h3, h4 {
+    font-family: "Segoe UI", sans-serif;
+    color: #009739;
+}
+
+/* === PESTAÑAS === */
+[data-testid="stTabs"] button {
+    color: #009739;
+    font-weight: bold;
+    border: none;
+    padding: 0.6em 1.2em;
+    border-radius: 6px;
+    background-color: transparent;
+}
+[data-testid="stTabs"] button:hover {
+    background-color: #e6f6ec;
+}
+[data-testid="stTabs"] button:focus {
+    background-color: #c7f0da;
+    color: #007a2f;
+}
+
+/* === TABLAS === */
+thead tr th {
+    background-color: #009739 !important;
+    color: white !important;
+    font-weight: bold;
+    text-align: center;
+}
+tbody tr:nth-child(even) {
+    background-color: #f1fdf7;
+}
+tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+tbody td {
+    text-align: center;
+}
