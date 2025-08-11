@@ -110,7 +110,7 @@ def get_db_connection(mysql_password=None):
     except Exception:
         # Fallback a conexión local (usa mysql_password si fue provisto)
         return mysql.connector.connect(
-            host="localhost", user="root", password=mysql_password or "Emanuel10*", database="mediciones_db"
+            host="localhost", user="root", password=mysql_password or "", database="mediciones_db"
         )
 
 
@@ -260,34 +260,21 @@ with tab_ingreso:
             del st.session_state[key]
         st.experimental_rerun()
 
-        # Contraseña (solo para uso local). En producción se utilizará st.secrets.
-    mysql_password = st.text_input("🔐 Contraseña de MySQL (solo local)", type="password")
-    try:
-        secrets_present = "mysql" in st.secrets
-    except Exception:
-        secrets_present = False
-
-
+    mysql_password = st.text_input("🔐 Contraseña de MySQL", type="password")
     planta = st.text_input("🏭 Nombre de la planta")
     fecha_analisis = st.date_input("📅 Fecha del análisis", value=datetime.date.today())
     notas = st.text_area("📝 Comentarios del ensayo")
     archivos = st.file_uploader("📁 Subir archivo(s) CSV", type="csv", accept_multiple_files=True)
     accion = st.radio("¿Qué hacer con los datos anteriores?", ["Conservar", "Eliminar todo antes de cargar"])
 
-    # Permitir iniciar procesamiento si se ingresó contraseña local o si hay st.secrets en producción
-    if st.button("🚀 Iniciar procesamiento") and (mysql_password or secrets_present) and archivos:
+    if st.button("🚀 Iniciar procesamiento") and mysql_password and archivos:
         st.session_state["procesado"] = True
-        # Guardar la contraseña en sesión SOLO si se ingresó (para local). En producción, st.secrets es usado.
-        if mysql_password:
-            st.session_state["mysql_password"] = mysql_password
-        else:
-            st.session_state["mysql_password"] = ""
+        st.session_state["mysql_password"] = mysql_password
         st.session_state["archivos"] = archivos
         st.session_state["planta"] = planta
         st.session_state["fecha_analisis"] = fecha_analisis
         st.session_state["notas"] = notas
         st.session_state["accion"] = accion
-
 
 # 🔍 PROCESAMIENTO
 with tab_procesamiento:
@@ -579,35 +566,9 @@ with tab_comparativos:
 with tab_graficos:
     st.subheader("📉 Visualización por variable")
 
-    # Verificar si hay secrets (producción)
-    try:
-        secrets_present = "mysql" in st.secrets
-    except Exception:
-        secrets_present = False
-
-    if secrets_present:
-        conn = mysql.connector.connect(
-            host=st.secrets["mysql"]["host"],
-            user=st.secrets["mysql"]["user"],
-            password=st.secrets["mysql"]["password"],
-            database=st.secrets["mysql"]["database"],
-            port=st.secrets["mysql"]["port"]
-        )
-    else:
-        mysql_password = st.session_state.get("mysql_password", "")
-        if mysql_password:
-            conn = mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password=mysql_password,
-                database="mediciones_db",
-                port=3306
-            )
-        else:
-            st.warning("🔑 Ingresa tu contraseña en la pestaña 'Ingreso de información' para acceder a esta sección.")
-            conn = None
-
-    if conn:
+    mysql_password = st.session_state.get("mysql_password", "")
+    if mysql_password:
+        conn = get_db_connection(mysql_password)
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM mediciones")
         df_total = pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
@@ -622,7 +583,7 @@ with tab_graficos:
         tiempo = grupo["tiempo"].to_numpy()
 
         valor_maximo = np.round(y.max(), 4)
-
+        
         # 🟢 Título con nombre de la medición
         st.markdown(f"#### 📌 Medición seleccionada: `{medicion_sel}`")
 
@@ -649,8 +610,13 @@ with tab_graficos:
         nombre_archivo = f"otros_{medicion_sel}_{variable_sel}.png"
         store_fig_in_memory(fig, nombre_archivo)
 
+
         cursor.close()
         conn.close()
+
+    else:
+        st.warning("🔑 Ingresa tu contraseña en la pestaña 'Ingreso de información' para acceder a esta sección.")
+
 
 # 💾 GUARDAR INFORMACIÓN
 with tab_guardar:
@@ -684,67 +650,71 @@ with tab_guardar:
             # Mostrar botón de guardado definitivo si ya se confirmaron las preferencias
             if st.session_state.get("confirmado_guardado", False):
                 if st.button("💾 Guardar proyecto ahora"):
+                    mysql_password = st.session_state.get("mysql_password", "")
                     planta = st.session_state.get("planta", "")
                     fecha_analisis = st.session_state.get("fecha_analisis", "")
 
-                    # Conexión flexible
-                    conn = get_db_connection(mysql_password)
-
-                    if not conn:
-                        st.error("No se pudo establecer la conexión. Ingresa la contraseña local o configura `st.secrets` en producción.")
-                        st.stop()
-
-                    # Verificar si ya existe histórico de esa planta y fecha
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        SELECT COUNT(*) FROM historico
-                        WHERE planta = %s AND fecha = %s
-                    """, (planta, fecha_analisis))
-                    existe = cursor.fetchone()[0] > 0
-                    cursor.close()
-                    conn.close()
-
-                    if existe:
-                        opcion = st.radio(
-                            "⚠️ Ya existe un guardado para esta planta y fecha. ¿Qué deseas hacer?",
-                            ("Sobrescribir el anterior", "Guardar como nueva copia")
-                        )
-
-                        if opcion == "Sobrescribir el anterior":
-                            conn = get_db_connection(mysql_password)
-
-                            cursor = conn.cursor()
-                            cursor.execute("""
-                                DELETE FROM historico
-                                WHERE planta = %s AND fecha = %s
-                            """, (planta, fecha_analisis))
-                            conn.commit()
-                            cursor.close()
-                            conn.close()
-
-                            # Eliminar gráficos asociados
-                            for archivo in Path(output_folder).glob(f"*{planta}_{fecha_analisis.strftime('%Y%m%d')}*.png"):
-                                archivo.unlink(missing_ok=True)
-
-                            persist_saved_project(output_folder, fecha_analisis, planta, None)
-                            st.success("✅ Proyecto sobrescrito correctamente.")
-
-                        elif opcion == "Guardar como nueva copia":
-                            copia_num = 1
-                            for fname in list(st.session_state["graficos_temp"].keys()):
-                                nuevo_nombre = fname.replace(
-                                    f"{planta}_{fecha_analisis.strftime('%Y%m%d')}",
-                                    f"{planta}_{fecha_analisis.strftime('%Y%m%d')}_copia{copia_num}"
-                                )
-                                st.session_state["graficos_temp"][nuevo_nombre] = st.session_state["graficos_temp"].pop(fname)
-                                copia_num += 1
-
-                            persist_saved_project(output_folder, fecha_analisis, planta, None)
-                            st.success("✅ Proyecto guardado como nueva copia.")
-
+                    if not mysql_password:
+                        st.error("Ingresa la contraseña de MySQL en la pestaña 'Ingreso de información'.")
+                    elif st.session_state.get("df_resumen_db") is None:
+                        st.error("No hay resumen temporal para guardar.")
                     else:
-                        persist_saved_project(output_folder, fecha_analisis, planta, None)
-                        st.success("✅ Proyecto guardado correctamente.")
+                        # Conexión para verificar si ya existe histórico de esa planta y fecha
+                        conn = get_db_connection(mysql_password)
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            SELECT COUNT(*) FROM historico
+                            WHERE planta = %s AND fecha = %s
+                        """, (planta, fecha_analisis))
+                        existe = cursor.fetchone()[0] > 0
+                        cursor.close()
+                        conn.close()
+
+                        if existe:
+                            opcion = st.radio(
+                                "⚠️ Ya existe un guardado para esta planta y fecha. ¿Qué deseas hacer?",
+                                ("Sobrescribir el anterior", "Guardar como nueva copia")
+                            )
+
+                            if opcion == "Sobrescribir el anterior":
+                                # Eliminar registros de la BD
+                                conn = get_db_connection(mysql_password)
+                                cursor = conn.cursor()
+                                cursor.execute("""
+                                    DELETE FROM historico
+                                    WHERE planta = %s AND fecha = %s
+                                """, (planta, fecha_analisis))
+                                conn.commit()
+                                cursor.close()
+                                conn.close()
+
+                                # Eliminar gráficos asociados
+                                for archivo in Path(output_folder).glob(f"*{planta}_{fecha_analisis.strftime('%Y%m%d')}*.png"):
+                                    archivo.unlink(missing_ok=True)
+
+                                persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
+                                st.success("✅ Proyecto sobrescrito correctamente.")
+
+                            elif opcion == "Guardar como nueva copia":
+                                # Agregar sufijo 'copiaN' en nombres de archivo guardados
+                                copia_num = 1
+                                for fname in list(st.session_state["graficos_temp"].keys()):
+                                    nuevo_nombre = fname.replace(
+                                        f"{planta}_{fecha_analisis.strftime('%Y%m%d')}",
+                                        f"{planta}_{fecha_analisis.strftime('%Y%m%d')}_copia{copia_num}"
+                                    )
+                                    st.session_state["graficos_temp"][nuevo_nombre] = st.session_state["graficos_temp"].pop(fname)
+                                    copia_num += 1
+
+                                persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
+                                st.success("✅ Proyecto guardado como nueva copia.")
+
+                        else:
+                            persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
+                            st.success("✅ Proyecto guardado correctamente.")
+
+
+
 
                 st.markdown("""
                     <div style="background-color:#f2fdf5; border-left: 5px solid #009739; padding: 20px; border-radius: 10px; margin-top: 15px;">
@@ -762,7 +732,8 @@ with tab_guardar:
     else:
         st.info("ℹ️ No hay análisis procesado actualmente.")
 
-# 📜 HISTÓRICOS
+
+#HISTORICOS
 with tab_historicos:
     # === Selector visual de plantas con imágenes ===
     st.markdown("## 🌿 Selecciona una planta para consultar")
@@ -781,14 +752,15 @@ with tab_historicos:
 
     st.markdown("---")
 
+
     st.subheader("📂 Consulta de históricos")
 
-    # 🔄 Conexión flexible (local o producción)
-    conn = get_db_connection(mysql_password)
-
-    if conn:
+    mysql_password = st.session_state.get("mysql_password", "")
+    if mysql_password:
+        conn = get_db_connection(mysql_password)
         cursor = conn.cursor()
 
+        
         # 🔍 Selección de planta (sincronizado con los botones visuales)
         cursor.execute("SELECT DISTINCT planta FROM historico ORDER BY planta")
         plantas_disponibles = [row[0] for row in cursor.fetchall()]
@@ -803,6 +775,7 @@ with tab_historicos:
 
         # Actualizar sesión si elige manualmente en el select
         st.session_state["planta_filtrada"] = planta_sel
+
 
         # 🔍 Selección de fecha
         cursor.execute("SELECT DISTINCT fecha FROM historico WHERE planta = %s ORDER BY fecha DESC", (planta_sel,))
@@ -894,7 +867,7 @@ with tab_historicos:
         cursor.close()
         conn.close()
     else:
-        st.error("❌ No se pudo conectar a la base de datos. Verifica la configuración de conexión.")
+        st.warning("🔑 Ingresa tu contraseña en la pestaña 'Ingreso de información' para ver históricos.")
 
 
 st.markdown("""
