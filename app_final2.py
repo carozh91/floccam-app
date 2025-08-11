@@ -678,7 +678,7 @@ with tab_guardar:
 
                             if opcion == "Sobrescribir el anterior":
                                 # Eliminar registros de la BD
-                                conn = get_db_connection(mysql_password))
+                                conn = get_db_connection(mysql_password)
                                 cursor = conn.cursor()
                                 cursor.execute("""
                                     DELETE FROM historico
