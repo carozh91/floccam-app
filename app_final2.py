@@ -50,7 +50,7 @@ def persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
     # 3) Insertar en historico (si existe df_resumen_db en sesión)
     df_db = st.session_state.get("df_resumen_db")
     if df_db is not None and not df_db.empty:
-        conn = mysql.connector.connect(host="localhost", user="root", password=mysql_password, database="mediciones_db")
+        conn = get_db_connection(mysql_password)
         cursor = conn.cursor()
         for _, fila in df_db.iterrows():
             cursor.execute("""
@@ -89,6 +89,29 @@ def persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
 
     st.success("✅ Proyecto guardado en disco y en la tabla `historico`.")
 # ------------------- FIN: helpers para guardado temporal -------------------
+
+def get_db_connection(mysql_password=None):
+    """
+    Devuelve una conexión mysql.connector.connect.
+    - Si st.secrets['mysql'] existe (Streamlit Cloud / .streamlit/secrets.toml), lo usa.
+    - Si no, hace fallback a localhost usando mysql_password (uso local).
+    """
+    # Intentar usar st.secrets si está disponible
+    try:
+        cfg = st.secrets["mysql"]
+        host = cfg.get("host")
+        user = cfg.get("user")
+        password = cfg.get("password")
+        database = cfg.get("database")
+        port = int(cfg.get("port")) if cfg.get("port") else 3306
+        return mysql.connector.connect(
+            host=host, user=user, password=password, database=database, port=port
+        )
+    except Exception:
+        # Fallback a conexión local (usa mysql_password si fue provisto)
+        return mysql.connector.connect(
+            host="localhost", user="root", password=mysql_password or "", database="mediciones_db"
+        )
 
 
 # Definir carpeta donde están las imágenes de las plantas
@@ -263,11 +286,7 @@ with tab_procesamiento:
         notas = st.session_state["notas"]
         accion = st.session_state["accion"]
 
-        conn = mysql.connector.connect(
-            host="localhost", user="root",
-            password=mysql_password,
-            database="mediciones_db"
-        )
+        conn = get_db_connection(mysql_password)
         cursor = conn.cursor()
 
         df_manual_dict = {}
@@ -549,9 +568,7 @@ with tab_graficos:
 
     mysql_password = st.session_state.get("mysql_password", "")
     if mysql_password:
-        conn = mysql.connector.connect(
-            host="localhost", user="root", password=mysql_password, database="mediciones_db"
-        )
+        conn = get_db_connection(mysql_password)
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM mediciones")
         df_total = pd.DataFrame(cursor.fetchall(), columns=[col[0] for col in cursor.description])
@@ -643,9 +660,7 @@ with tab_guardar:
                         st.error("No hay resumen temporal para guardar.")
                     else:
                         # Conexión para verificar si ya existe histórico de esa planta y fecha
-                        conn = mysql.connector.connect(
-                            host="localhost", user="root", password=mysql_password, database="mediciones_db"
-                        )
+                        conn = get_db_connection(mysql_password)
                         cursor = conn.cursor()
                         cursor.execute("""
                             SELECT COUNT(*) FROM historico
@@ -663,9 +678,7 @@ with tab_guardar:
 
                             if opcion == "Sobrescribir el anterior":
                                 # Eliminar registros de la BD
-                                conn = mysql.connector.connect(
-                                    host="localhost", user="root", password=mysql_password, database="mediciones_db"
-                                )
+                                conn = get_db_connection(mysql_password))
                                 cursor = conn.cursor()
                                 cursor.execute("""
                                     DELETE FROM historico
@@ -744,9 +757,7 @@ with tab_historicos:
 
     mysql_password = st.session_state.get("mysql_password", "")
     if mysql_password:
-        conn = mysql.connector.connect(
-            host="localhost", user="root", password=mysql_password, database="mediciones_db"
-        )
+        conn = get_db_connection(mysql_password)
         cursor = conn.cursor()
 
         
