@@ -79,7 +79,8 @@ def persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
     # 3) Insertar en historico (si existe df_resumen_db en sesión)
     df_db = st.session_state.get("df_resumen_db")
     if df_db is not None and not df_db.empty:
-        conn = get_db_connection(mysql_password)
+        mysql_password_hist = st.session_state.get("mysql_password", None)
+        conn = get_db_connection(mysql_password_hist)
         cursor = conn.cursor()
         for _, fila in df_db.iterrows():
             cursor.execute("""
@@ -918,7 +919,8 @@ with tab_historicos:
     st.markdown("## 🌿 Consulta de históricos")
 
     # 🔄 Conexión flexible (local o producción)
-    conn = get_db_connection(mysql_password)
+    mysql_password_hist = st.session_state.get("mysql_password", None)
+    conn = get_db_connection(mysql_password_hist)
 
     if conn:
         cursor = conn.cursor()
@@ -1006,23 +1008,10 @@ with tab_historicos:
 
         # 📊 Visualización de gráficos
 
-        def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
-            conn = get_db_connection(mysql_password)
-            cur = conn.cursor()
-            q = "SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo FROM graficos WHERE planta=%s AND fecha=%s"
-            params = [planta, fecha]
-            if tipo:
-                q += " AND tipo=%s"; params.append(tipo)
-            if nombre_medicion is not None:
-                q += " AND nombre_medicion=%s"; params.append(nombre_medicion)
-            q += " ORDER BY id"
-            cur.execute(q, tuple(params))
-            rows = cur.fetchall()
-            cur.close(); conn.close()
-            return rows
+        
 
         with st.expander("🖼️ Ver gráficos guardados"):
-            st.markdown("Selecciona los tipos de gráficos que deseas visualizar:")
+            
             # Leemos desde la BD (tabla graficos)
             mysql_password_hist = st.session_state.get("mysql_password", None)
 
