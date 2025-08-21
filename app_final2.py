@@ -215,6 +215,44 @@ def bootstrap_graficos_table():
 # Ejecutar el bootstrap al iniciar la app
 bootstrap_graficos_table()
 
+def bootstrap_graficos_indexes():
+    """
+    Crea índices si no existen (seguro de correr múltiples veces).
+    Optimiza consultas por planta, fecha, tipo y nombre_*.
+    """
+    try:
+        conn = get_db_connection(st.session_state.get("mysql_password", None))
+        cur = conn.cursor()
+
+        def _ensure_index(index_name: str, cols: str):
+            # ¿ya existe?
+            cur.execute(
+                """
+                SELECT COUNT(1)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'graficos'
+                  AND index_name = %s
+                """,
+                (index_name,),
+            )
+            exists = cur.fetchone()[0] > 0
+            if not exists:
+                cur.execute(f"CREATE INDEX {index_name} ON graficos ({cols})")
+
+        # Igualdad en (planta, fecha, tipo) + búsqueda por nombre_medicion
+        _ensure_index("idx_graficos_pftm", "planta, fecha, tipo, nombre_medicion")
+        # Igualdad en (planta, fecha, tipo) + LIKE 'prefijo_%' sobre nombre_archivo
+        _ensure_index("idx_graficos_pfta", "planta, fecha, tipo, nombre_archivo")
+
+        conn.commit()
+        cur.close(); conn.close()
+    except Exception as e:
+        st.warning("No pude crear/verificar índices en 'graficos'.")
+        st.exception(e)
+
+# 👇 Llama a la función justo después de definirla (y después de bootstrap_graficos_table)
+bootstrap_graficos_indexes()
 
 
 
