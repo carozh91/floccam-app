@@ -923,19 +923,37 @@ with tab_historicos:
 
             if ver_tiempo:
                 st.markdown("#### ⏱️ Gráficos - Tiempo vs Diámetro")
-                # por cada medición guardada en historico (ya tienes historico_df arriba)
+
+                import re
+                def _norm(s: str) -> str:
+                    # normaliza: quita no-alfanum, colapsa a "_", minúsculas
+                    return re.sub(r"\W+", "_", (s or "")).strip("_").lower()
+
+                # Trae TODOS los TVD del día/planta desde BD (sin filtrar por nombre aún)
+                all_rows_tvd = cargar_graficos_db(
+                    planta_sel, fecha_sel,
+                    tipo='tiempo_vs_diametro',
+                    nombre_medicion=None,           # sin filtro; filtramos en Python
+                    mysql_password=mysql_password_hist
+                )
+
                 for nombre in historico_df["nombre_medicion"].unique():
-                    rows = cargar_graficos_db(
-                        planta_sel, fecha_sel,
-                        tipo='tiempo_vs_diametro',
-                        nombre_medicion=None,
-                        mysql_password=mysql_password_hist
-                    )
-                    if rows:
+                    nombre_norm = _norm(nombre)
+
+                    # Filtra solo las imágenes cuyo "nombre_medicion" (o filename) coincide con este nombre
+                    rows_filtradas = []
+                    for nombre_archivo, formato, blob, nombre_db, _tipo in all_rows_tvd:
+                        base = nombre_db or nombre_archivo.split("_grafico_")[0]
+                        if _norm(base) == nombre_norm:
+                            rows_filtradas.append((nombre_archivo, blob))
+
+                    if rows_filtradas:
                         with st.expander(f"🧪 {nombre}"):
-                            for nombre_archivo, formato, blob, _, _ in rows:
-                                img = Image.open(io.BytesIO(blob))
-                                st.image(img, caption=nombre_archivo, use_column_width=True)
+                            for nombre_archivo, blob in rows_filtradas:
+                                st.image(io.BytesIO(blob), caption=nombre_archivo, use_container_width=True)
+                    else:
+                        st.info(f"ℹ️ No encontré imagen de '{nombre}' para {planta_sel} - {fecha_sel}.")
+
 
             if ver_comparativos:
                 st.markdown("#### 📈 Gráficos comparativos")
