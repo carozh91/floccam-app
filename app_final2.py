@@ -144,16 +144,47 @@ def get_db_connection(mysql_password=None):
 def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
     """
     Trae imágenes desde la tabla `graficos`.
-    - Si `nombre_medicion` viene, filtra en SQL usando:
-        1) match exacto por nombre_medicion,
-        2) match por nombre_medicion en minúsculas,
-        3) match por nombre_archivo LIKE '<nombre_safe>_grafico_%'
+    Para 'tiempo_vs_diametro' con nombre especificado, relajamos el filtro de `tipo` y
+    confiamos además en el patrón del filename '<nombre_safe>_grafico_%' para no perder nada.
     """
     import re
     conn = get_db_connection(mysql_password)
     cur = conn.cursor()
 
-    # Base de la consulta
+    # Normaliza para construir el patrón del filename
+    def _safe(s: str) -> str:
+        return re.sub(r"\W+", "_", (s or "").lower()).strip("_")
+
+    # Caso ESPECIAL: tiempo_vs_diametro + nombre dado -> filtro tolerante
+    if tipo == 'tiempo_vs_diametro' and nombre_medicion is not None:
+        base = (nombre_medicion or "").lower()
+        nombre_safe = _safe(base)
+
+        q = """
+            SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo
+            FROM graficos
+            WHERE planta = %s AND fecha = %s
+              AND (
+                    -- 1) Coincidencia por tipo correcto + nombre
+                    (tipo = 'tiempo_vs_diametro' AND (
+                          nombre_medicion = %s
+                       OR LOWER(nombre_medicion) = %s
+                       OR nombre_archivo LIKE %s
+                    ))
+                    -- 2) O bien: patrón de filename típico de TVD (para casos mal etiquetados),
+                    -- evitando archivos comparativos que empiezan por 'grafico_'
+                 OR (nombre_archivo LIKE %s AND nombre_archivo NOT LIKE 'grafico_%%')
+              )
+            ORDER BY id
+        """
+        params = [planta, fecha, nombre_medicion, base, f"{nombre_safe}_grafico_%", f"{nombre_safe}_grafico_%"]
+
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return rows
+
+    # Resto de casos (comparativos, otros, o TVD sin nombre)
     q = """
         SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo
         FROM graficos
@@ -161,15 +192,13 @@ def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_pas
     """
     params = [planta, fecha]
 
-    # Filtro por tipo (si aplica)
     if tipo:
         q += " AND tipo = %s"
         params.append(tipo)
 
-    # Filtro por nombre (normalizado) si lo pasamos
     if nombre_medicion is not None:
         base = (nombre_medicion or "").lower()
-        nombre_safe = re.sub(r"\W+", "_", base).strip("_")
+        nombre_safe = _safe(base)
         q += """
             AND (
                  nombre_medicion = %s
