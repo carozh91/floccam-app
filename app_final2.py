@@ -114,25 +114,7 @@ def get_db_connection(mysql_password=None):
         )
 
 
-# Definir carpeta donde están las imágenes de las plantas
-CARPETA_PLANTAS = "imagenes_plantas"
 
-# Lista de plantas con sus archivos e identificadores
-PLANTAS = [
-    {"nombre": "Aguas Frías", "archivo": "aguasfrias.png"},
-    {"nombre": "Barbosa", "archivo": "barbosa.png"},
-    {"nombre": "Caldas", "archivo": "caldas.png"},
-    {"nombre": "La Ayurá", "archivo": "laayura.png"},
-    {"nombre": "La Cascada", "archivo": "lacascada.png"},
-    {"nombre": "La Montaña", "archivo": "lamontaña.png"},
-    {"nombre": "Manantiales", "archivo": "manantiales.png"},
-    {"nombre": "Palmitas", "archivo": "palmitas.png"},
-    {"nombre": "Rionegro", "archivo": "rionegro.png"},
-    {"nombre": "San Antonio", "archivo": "sanantonio.png"},
-    {"nombre": "San Cristóbal", "archivo": "sancristobal.png"},
-    {"nombre": "San Nicolás", "archivo": "sannicolas.png"},
-    {"nombre": "Villahermosa", "archivo": "villahermosa.png"}
-]
 
 def local_css(file_name):
     with open(file_name) as f:
@@ -764,22 +746,25 @@ with tab_guardar:
 
 # 📜 HISTÓRICOS
 with tab_historicos:
-    # === Selector visual de plantas con imágenes ===
-    st.markdown("## 🌿 Selecciona una planta para consultar")
-    st.markdown("Haz clic sobre la planta que deseas explorar.")
+   # === Selector simple de planta y fecha ===
+    st.markdown("## 🌿 Consulta de históricos")
 
-    cols = st.columns(4)
-    for idx, planta in enumerate(PLANTAS):
-        with cols[idx % 4]:
-            st.markdown(f"<div style='text-align:center'>", unsafe_allow_html=True)
-            img_path = f"{CARPETA_PLANTAS}/{planta['archivo']}"
-            st.image(img_path, use_column_width=True)
-            if st.button(planta["nombre"], key=f"btn_{planta['nombre']}"):
-                st.session_state["planta_filtrada"] = planta["nombre"]
-                st.success(f"🔎 Filtrando por planta: {planta['nombre']}")
-            st.markdown("</div>", unsafe_allow_html=True)
+    # 🔄 Conexión flexible (local o producción)
+    conn = get_db_connection(mysql_password)
 
-    st.markdown("---")
+    if conn:
+        cursor = conn.cursor()
+
+        # 🔍 Selección de planta
+        cursor.execute("SELECT DISTINCT planta FROM historico ORDER BY planta")
+        plantas_disponibles = [row[0] for row in cursor.fetchall()]
+        planta_sel = st.selectbox("🏭 Selecciona la planta", plantas_disponibles)
+
+        # 🔍 Selección de fecha
+        cursor.execute("SELECT DISTINCT fecha FROM historico WHERE planta = %s ORDER BY fecha DESC", (planta_sel,))
+        fechas_disponibles = [row[0] for row in cursor.fetchall()]
+        fecha_sel = st.selectbox("📅 Selecciona la fecha", fechas_disponibles)
+
 
     st.subheader("📂 Consulta de históricos")
 
