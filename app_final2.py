@@ -141,6 +141,49 @@ def get_db_connection(mysql_password=None):
         return mysql.connector.connect(
             host="localhost", user="root", password=mysql_password or "Emanuel10*", database="mediciones_db"
         )
+def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
+    """
+    Trae imágenes desde la tabla `graficos`.
+    - Si `nombre_medicion` viene, filtra en SQL usando:
+        1) match exacto por nombre_medicion,
+        2) match por nombre_medicion en minúsculas,
+        3) match por nombre_archivo LIKE '<nombre_safe>_grafico_%'
+    """
+    import re
+    conn = get_db_connection(mysql_password)
+    cur = conn.cursor()
+
+    # Base de la consulta
+    q = """
+        SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo
+        FROM graficos
+        WHERE planta = %s AND fecha = %s
+    """
+    params = [planta, fecha]
+
+    # Filtro por tipo (si aplica)
+    if tipo:
+        q += " AND tipo = %s"
+        params.append(tipo)
+
+    # Filtro por nombre (normalizado) si lo pasamos
+    if nombre_medicion is not None:
+        base = (nombre_medicion or "").lower()
+        nombre_safe = re.sub(r"\W+", "_", base).strip("_")
+        q += """
+            AND (
+                 nombre_medicion = %s
+              OR LOWER(nombre_medicion) = %s
+              OR nombre_archivo LIKE %s
+            )
+        """
+        params += [nombre_medicion, base, f"{nombre_safe}_grafico_%"]
+
+    q += " ORDER BY id"
+    cur.execute(q, tuple(params))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return rows
 
 
 def bootstrap_graficos_table():
@@ -924,35 +967,21 @@ with tab_historicos:
             if ver_tiempo:
                 st.markdown("#### ⏱️ Gráficos - Tiempo vs Diámetro")
 
-                import re
-                def _norm(s: str) -> str:
-                    # normaliza: quita no-alfanum, colapsa a "_", minúsculas
-                    return re.sub(r"\W+", "_", (s or "")).strip("_").lower()
-
-                # Trae TODOS los TVD del día/planta desde BD (sin filtrar por nombre aún)
-                all_rows_tvd = cargar_graficos_db(
-                    planta_sel, fecha_sel,
-                    tipo='tiempo_vs_diametro',
-                    nombre_medicion=None,           # sin filtro; filtramos en Python
-                    mysql_password=mysql_password_hist
-                )
-
                 for nombre in historico_df["nombre_medicion"].unique():
-                    nombre_norm = _norm(nombre)
+                    rows = cargar_graficos_db(
+                        planta_sel, fecha_sel,
+                        tipo='tiempo_vs_diametro',
+                        nombre_medicion=nombre,           # ahora filtramos en SQL
+                        mysql_password=mysql_password_hist
+                    )
 
-                    # Filtra solo las imágenes cuyo "nombre_medicion" (o filename) coincide con este nombre
-                    rows_filtradas = []
-                    for nombre_archivo, formato, blob, nombre_db, _tipo in all_rows_tvd:
-                        base = nombre_db or nombre_archivo.split("_grafico_")[0]
-                        if _norm(base) == nombre_norm:
-                            rows_filtradas.append((nombre_archivo, blob))
-
-                    if rows_filtradas:
+                    if rows:
                         with st.expander(f"🧪 {nombre}"):
-                            for nombre_archivo, blob in rows_filtradas:
+                            for nombre_archivo, formato, blob, _nombre_db, _tipo in rows:
                                 st.image(io.BytesIO(blob), caption=nombre_archivo, use_container_width=True)
                     else:
                         st.info(f"ℹ️ No encontré imagen de '{nombre}' para {planta_sel} - {fecha_sel}.")
+
 
 
             if ver_comparativos:
