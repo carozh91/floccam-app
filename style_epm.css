@@ -145,7 +145,7 @@ tbody td {
 }
 
 /* Oculta solo el primer span (el ícono roto por defecto) */
-.stExpander summary span:first-child {
+.stExpander > details > summary > span:first-child {
     display: none !important;
 }
 
