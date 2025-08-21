@@ -1030,7 +1030,7 @@ with tab_historicos:
                         nombre_medicion=nombre,           # ahora filtramos en SQL
                         mysql_password=mysql_password_hist
                     )
-
+                    rows = [r for r in rows if ("_grafico_" in r[0]) and (not r[0].startswith("grafico_"))]
                     if rows:
                         with st.expander(f"🧪 {nombre}"):
                             for nombre_archivo, formato, blob, _nombre_db, _tipo in rows:
@@ -1047,6 +1047,7 @@ with tab_historicos:
                     tipo='comparativo',
                     mysql_password=mysql_password_hist
                 )
+                rows = [r for r in rows if r[0].startswith("grafico_")]
                 for nombre_archivo, formato, blob, _, _ in rows:
                     with st.expander(f"📊 {nombre_archivo}"):
                         img = Image.open(io.BytesIO(blob))
@@ -1059,6 +1060,7 @@ with tab_historicos:
                     tipo='otros',
                     mysql_password=mysql_password_hist
                 )
+                rows = [r for r in rows if (not r[0].startswith("grafico_")) and ("_grafico_" not in r[0])]
                 for nombre_archivo, formato, blob, nom_med, _ in rows:
                     with st.expander(f"📌 {nombre_archivo}"):
                         img = Image.open(io.BytesIO(blob))
