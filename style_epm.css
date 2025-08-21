@@ -114,23 +114,8 @@ tbody td {
     text-align: center;
 }
 
-/* === EXPANDERS === */
-.stExpander summary {
-    font-weight: bold;
-    color: #009739;
-    font-size: 1.05rem;
-}
 
 
-
-/* Caja alrededor de cada expander */
-.stExpander {
-    border: 1.5px solid #009739;
-    border-radius: 12px;
-    margin-bottom: 0.8em;
-    background-color: #f9fffa;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
 
 /* ===== EXPANDERS con ícono SVG verde ===== */
 
@@ -144,10 +129,11 @@ tbody td {
     font-size: 1.05rem;
 }
 
-/* Oculta solo el primer span (el ícono roto por defecto) */
-.stExpander > details > summary > span:first-child {
+/* Oculta solo el primer span dentro del summary del expander */
+.stExpander summary > span:first-child {
     display: none !important;
 }
+
 
 /* Nuestro ícono SVG (flecha) en verde */
 .stExpander summary::before {
@@ -170,11 +156,4 @@ details[open] > summary::before {
     transform: rotate(90deg);
 }
 
-/* Caja visual del expander */
-.stExpander {
-    border: 1.5px solid #009739;
-    border-radius: 12px;
-    margin-bottom: 0.8em;
-    background-color: #f9fffa;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
+
