@@ -143,6 +143,36 @@ def get_db_connection(mysql_password=None):
         )
 
 
+def bootstrap_graficos_table():
+    ddl = """
+    CREATE TABLE IF NOT EXISTS graficos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      planta VARCHAR(100) NOT NULL,
+      fecha DATE NOT NULL,
+      nombre_medicion VARCHAR(255) NOT NULL,
+      tipo VARCHAR(80) DEFAULT NULL,
+      nombre_archivo VARCHAR(255) NOT NULL,
+      formato VARCHAR(10) DEFAULT 'PNG',
+      imagen_blob LONGBLOB NOT NULL,
+      ancho INT DEFAULT NULL,
+      alto INT DEFAULT NULL,
+      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    try:
+        conn = get_db_connection(st.session_state.get("mysql_password", None))
+        cur = conn.cursor()
+        cur.execute(ddl)
+        conn.commit()
+        cur.close(); conn.close()
+    except Exception as e:
+        st.error("No pude crear/verificar la tabla graficos.")
+        st.exception(e)
+
+# Ejecutar el bootstrap al iniciar la app
+bootstrap_graficos_table()
+
+
 
 
 def local_css(file_name):
