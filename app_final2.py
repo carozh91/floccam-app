@@ -928,7 +928,7 @@ with tab_historicos:
                     rows = cargar_graficos_db(
                         planta_sel, fecha_sel,
                         tipo='tiempo_vs_diametro',
-                        nombre_medicion=nombre,
+                        nombre_medicion=None,
                         mysql_password=mysql_password_hist
                     )
                     if rows:
