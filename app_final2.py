@@ -39,10 +39,39 @@ def persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
     """
     os.makedirs(output_folder, exist_ok=True)
 
-    # 1) Escribir imágenes
+    # 1) Escribir imágenes a disco y BD
+    conn_g = get_db_connection(mysql_password)
+    cur_g = conn_g.cursor()
+
     for fname, b in st.session_state.get("graficos_temp", {}).items():
+        # (a) Guardado en disco (opcional, útil en local)
         with open(os.path.join(output_folder, fname), "wb") as f:
             f.write(b)
+
+        # (b) Derivar tipo / nombre_medicion desde el nombre del archivo
+        # Convenciones actuales en tu app:
+        #   "{nombre_safe}_grafico_{planta_safe}_{YYYYMMDD}.png"         -> tipo='tiempo_vs_diametro'
+        #   "grafico_*{planta_safe}_{YYYYMMDD}.png"                       -> tipo='comparativo'
+        #   "otros_{nombre_safe}_{variable}.png"                          -> tipo='otros'
+        tipo = 'otros'
+        nombre_medicion = ''
+        if '_grafico_' in fname:
+            tipo = 'tiempo_vs_diametro'
+            nombre_medicion = fname.split('_grafico_')[0]
+        elif fname.startswith('grafico_'):
+            tipo = 'comparativo'
+            nombre_medicion = ''  # comparativos globales
+
+        # (c) Insertar BLOB en BD
+        cur_g.execute("""
+            INSERT INTO graficos(planta, fecha, nombre_medicion, tipo, nombre_archivo, formato, imagen_blob)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (planta, fecha_analisis, nombre_medicion, tipo, fname, 'PNG', b))
+
+    conn_g.commit()
+    cur_g.close()
+    conn_g.close()
+
 
     
 
@@ -836,37 +865,72 @@ with tab_historicos:
                 st.experimental_rerun()
 
         # 📊 Visualización de gráficos
+
+        def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
+            conn = get_db_connection(mysql_password)
+            cur = conn.cursor()
+            q = "SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo FROM graficos WHERE planta=%s AND fecha=%s"
+            params = [planta, fecha]
+            if tipo:
+                q += " AND tipo=%s"; params.append(tipo)
+            if nombre_medicion is not None:
+                q += " AND nombre_medicion=%s"; params.append(nombre_medicion)
+            q += " ORDER BY id"
+            cur.execute(q, tuple(params))
+            rows = cur.fetchall()
+            cur.close(); conn.close()
+            return rows
+
         with st.expander("🖼️ Ver gráficos guardados"):
+            st.markdown("Selecciona los tipos de gráficos que deseas visualizar:")
+            # Leemos desde la BD (tabla graficos)
+            mysql_password_hist = st.session_state.get("mysql_password", None)
+
             st.markdown("Selecciona los tipos de gráficos que deseas visualizar:")
             ver_tiempo = st.checkbox("⏱️ Tiempo vs Diámetro", value=True)
             ver_comparativos = st.checkbox("📈 Comparativos")
             ver_otros = st.checkbox("📊 Otros")
 
-            fecha_str = fecha_sel.strftime("%Y%m%d")
-            planta_safe = re.sub(r'\W+', '_', planta_sel)
-
             if ver_tiempo:
                 st.markdown("#### ⏱️ Gráficos - Tiempo vs Diámetro")
+                # por cada medición guardada en historico (ya tienes historico_df arriba)
                 for nombre in historico_df["nombre_medicion"].unique():
-                    nombre_safe = re.sub(r'\W+', '_', nombre)
-                    img_path = Path(output_folder) / f"{nombre_safe}_grafico_{planta_safe}_{fecha_str}.png"
-                    if img_path.exists():
+                    rows = cargar_graficos_db(
+                        planta_sel, fecha_sel,
+                        tipo='tiempo_vs_diametro',
+                        nombre_medicion=nombre,
+                        mysql_password=mysql_password_hist
+                    )
+                    if rows:
                         with st.expander(f"🧪 {nombre}"):
-                            st.image(str(img_path), caption=f"Gráfico - {nombre}")
+                            for nombre_archivo, formato, blob, _, _ in rows:
+                                img = Image.open(io.BytesIO(blob))
+                                st.image(img, caption=nombre_archivo, use_column_width=True)
 
             if ver_comparativos:
                 st.markdown("#### 📈 Gráficos comparativos")
-                for graf in Path(output_folder).glob(f"grafico_*{planta_safe}_{fecha_str}.png"):
-                    with st.expander(f"📊 {graf.name}"):
-                        st.image(str(graf), caption=graf.name)
+                rows = cargar_graficos_db(
+                    planta_sel, fecha_sel,
+                    tipo='comparativo',
+                    mysql_password=mysql_password_hist
+                )
+                for nombre_archivo, formato, blob, _, _ in rows:
+                    with st.expander(f"📊 {nombre_archivo}"):
+                        img = Image.open(io.BytesIO(blob))
+                        st.image(img, caption=nombre_archivo, use_column_width=True)
 
             if ver_otros:
                 st.markdown("#### 📊 Otros gráficos")
-                for nombre in historico_df["nombre_medicion"].unique():
-                    nombre_safe = re.sub(r'\W+', '_', nombre)
-                    for img_path in Path(output_folder).glob(f"otros_{nombre_safe}_*.png"):
-                        with st.expander(f"📌 {img_path.name}"):
-                            st.image(str(img_path), caption=f"Otro gráfico - {img_path.name}")
+                rows = cargar_graficos_db(
+                    planta_sel, fecha_sel,
+                    tipo='otros',
+                    mysql_password=mysql_password_hist
+                )
+                for nombre_archivo, formato, blob, nom_med, _ in rows:
+                    with st.expander(f"📌 {nombre_archivo}"):
+                        img = Image.open(io.BytesIO(blob))
+                        st.image(img, caption=f"Otro gráfico - {nombre_archivo}", use_column_width=True)
+
 
         cursor.close()
         conn.close()
