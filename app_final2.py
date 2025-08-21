@@ -746,7 +746,6 @@ with tab_guardar:
 
 # 📜 HISTÓRICOS
 with tab_historicos:
-   # === Selector simple de planta y fecha ===
     st.markdown("## 🌿 Consulta de históricos")
 
     # 🔄 Conexión flexible (local o producción)
@@ -758,41 +757,24 @@ with tab_historicos:
         # 🔍 Selección de planta
         cursor.execute("SELECT DISTINCT planta FROM historico ORDER BY planta")
         plantas_disponibles = [row[0] for row in cursor.fetchall()]
-        planta_sel = st.selectbox("🏭 Selecciona la planta", plantas_disponibles)
+
+        if not plantas_disponibles:
+            st.info("ℹ️ Aún no hay plantas registradas en el histórico.")
+            cursor.close(); conn.close()
+            st.stop()
+
+        planta_sel = st.selectbox("🏭 Selecciona la planta", plantas_disponibles, key="select_planta_hist")
 
         # 🔍 Selección de fecha
         cursor.execute("SELECT DISTINCT fecha FROM historico WHERE planta = %s ORDER BY fecha DESC", (planta_sel,))
         fechas_disponibles = [row[0] for row in cursor.fetchall()]
-        fecha_sel = st.selectbox("📅 Selecciona la fecha", fechas_disponibles)
 
+        if not fechas_disponibles:
+            st.info(f"ℹ️ No hay registros para la planta '{planta_sel}'.")
+            cursor.close(); conn.close()
+            st.stop()
 
-    st.subheader("📂 Consulta de históricos")
-
-    # 🔄 Conexión flexible (local o producción)
-    conn = get_db_connection(mysql_password)
-
-    if conn:
-        cursor = conn.cursor()
-
-        # 🔍 Selección de planta (sincronizado con los botones visuales)
-        cursor.execute("SELECT DISTINCT planta FROM historico ORDER BY planta")
-        plantas_disponibles = [row[0] for row in cursor.fetchall()]
-
-        # Si ya se seleccionó una planta con imagen, la usamos
-        planta_default = st.session_state.get("planta_filtrada", None)
-
-        if planta_default in plantas_disponibles:
-            planta_sel = st.selectbox("🏭 Planta seleccionada:", plantas_disponibles, index=plantas_disponibles.index(planta_default))
-        else:
-            planta_sel = st.selectbox("🏭 Selecciona la planta", plantas_disponibles)
-
-        # Actualizar sesión si elige manualmente en el select
-        st.session_state["planta_filtrada"] = planta_sel
-
-        # 🔍 Selección de fecha
-        cursor.execute("SELECT DISTINCT fecha FROM historico WHERE planta = %s ORDER BY fecha DESC", (planta_sel,))
-        fechas_disponibles = [row[0] for row in cursor.fetchall()]
-        fecha_sel = st.selectbox("📅 Selecciona la fecha", fechas_disponibles)
+        fecha_sel = st.selectbox("📅 Selecciona la fecha", fechas_disponibles, key="select_fecha_hist")
 
         # 📥 Consulta de datos históricos
         cursor.execute("""
@@ -830,14 +812,21 @@ with tab_historicos:
 
             if seleccionados and st.button("❌ Eliminar seleccionados"):
                 for nombre in seleccionados:
-                    cursor.execute("DELETE FROM historico WHERE nombre_medicion = %s", (nombre,))
+                    # Borra solo en el contexto actual (planta + fecha)
+                    cursor.execute(
+                        "DELETE FROM historico WHERE nombre_medicion = %s AND planta = %s AND fecha = %s",
+                        (nombre, planta_sel, fecha_sel)
+                    )
                     conn.commit()
 
-                    # Eliminar gráficos asociados
+                    # Borrar archivos relacionados
+                    nombre_safe = re.sub(r'\W+', '_', nombre)
+                    planta_safe = re.sub(r'\W+', '_', planta_sel)
+                    fecha_str = fecha_sel.strftime("%Y%m%d")
+
                     patrones = [
-                        f"{nombre}_grafico.png",
-                        f"{nombre}_grafico.svg",
-                        f"otros_{nombre}_*.png"
+                        f"{nombre_safe}_grafico_{planta_safe}_{fecha_str}.png",
+                        f"otros_{nombre_safe}_*.png",
                     ]
                     for patron in patrones:
                         for archivo in Path(output_folder).glob(patron):
@@ -854,25 +843,28 @@ with tab_historicos:
             ver_otros = st.checkbox("📊 Otros")
 
             fecha_str = fecha_sel.strftime("%Y%m%d")
+            planta_safe = re.sub(r'\W+', '_', planta_sel)
 
             if ver_tiempo:
                 st.markdown("#### ⏱️ Gráficos - Tiempo vs Diámetro")
                 for nombre in historico_df["nombre_medicion"].unique():
-                    img_path = Path(output_folder) / f"{nombre}_grafico.png"
+                    nombre_safe = re.sub(r'\W+', '_', nombre)
+                    img_path = Path(output_folder) / f"{nombre_safe}_grafico_{planta_safe}_{fecha_str}.png"
                     if img_path.exists():
                         with st.expander(f"🧪 {nombre}"):
                             st.image(str(img_path), caption=f"Gráfico - {nombre}")
 
             if ver_comparativos:
                 st.markdown("#### 📈 Gráficos comparativos")
-                for graf in Path(output_folder).glob(f"grafico_*{planta_sel}_{fecha_str}.png"):
+                for graf in Path(output_folder).glob(f"grafico_*{planta_safe}_{fecha_str}.png"):
                     with st.expander(f"📊 {graf.name}"):
                         st.image(str(graf), caption=graf.name)
 
             if ver_otros:
                 st.markdown("#### 📊 Otros gráficos")
                 for nombre in historico_df["nombre_medicion"].unique():
-                    for img_path in Path(output_folder).glob(f"otros_{nombre}_*.png"):
+                    nombre_safe = re.sub(r'\W+', '_', nombre)
+                    for img_path in Path(output_folder).glob(f"otros_{nombre_safe}_*.png"):
                         with st.expander(f"📌 {img_path.name}"):
                             st.image(str(img_path), caption=f"Otro gráfico - {img_path.name}")
 
@@ -880,7 +872,6 @@ with tab_historicos:
         conn.close()
     else:
         st.error("❌ No se pudo conectar a la base de datos. Verifica la configuración de conexión.")
-
 
 st.markdown("""
     <hr style="margin-top: 2em; margin-bottom: 1em;">
