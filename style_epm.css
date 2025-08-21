@@ -14,19 +14,43 @@ body, div, p, span, input, button, label {
     font-weight: bold;
     transition: background-color 0.3s ease;
 }
-
 .stButton > button:hover {
     background-color: #007a2f;
     color: white;
 }
 
-/* === SELECTBOX === */
+/* === SELECTBOX e INPUTS === */
 .stSelectbox div[data-baseweb="select"] {
-    background-color: white;
+    background-color: #f9fffa;
     border: 2px solid #009739;
     border-radius: 8px;
+    padding: 0.2rem 0.6rem;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
 }
 .stSelectbox div[data-baseweb="select"] * {
+    font-family: "Segoe UI", sans-serif;
+}
+
+/* Inputs de texto, fecha, número, área */
+.stDateInput,
+.stTextInput,
+.stNumberInput,
+.stTextArea,
+.stTextInput > div {
+    border-radius: 8px;
+    background-color: #f9fffa;
+}
+.stDateInput input,
+.stTextInput input,
+.stNumberInput input,
+.stTextArea textarea {
+    border: 2px solid #009739;
+    border-radius: 8px;
+    padding: 0.35em;
+    background-color: #f9fffa;
+    font-size: 1rem;
     font-family: "Segoe UI", sans-serif;
 }
 
@@ -55,21 +79,8 @@ body, div, p, span, input, button, label {
     font-weight: bold;
 }
 
-/* === INPUTS DE TEXTO Y FECHAS === */
-.stTextInput input,
-.stDateInput input,
-.stNumberInput input,
-.stTextArea textarea {
-    border: 2px solid #009739;
-    border-radius: 8px;
-    padding: 0.4em;
-    font-size: 1rem;
-    background-color: #f9fffa;
-    font-family: "Segoe UI", sans-serif;
-}
-
 /* === LABELS === */
-label, .stTextInput label, .stNumberInput label, .stTextArea label {
+label, .stTextInput label, .stDateInput label, .stNumberInput label, .stTextArea label, .stSelectbox label {
     color: #009739 !important;
     font-weight: bold;
 }
@@ -114,9 +125,6 @@ tbody td {
     text-align: center;
 }
 
-
-
-
 /* ===== EXPANDERS con ícono SVG verde ===== */
 
 /* Encabezado del expander */
@@ -129,31 +137,41 @@ tbody td {
     font-size: 1.05rem;
 }
 
-/* Oculta solo el primer span dentro del summary del expander */
-.stExpander summary > span:first-child {
-    display: none !important;
+/* Oculta únicamente el ícono roto sin afectar texto ni emojis */
+.stExpander summary span:first-child {
+    display: inline-block;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
-
-/* Nuestro ícono SVG (flecha) en verde */
+/* Ícono SVG verde personalizado */
 .stExpander summary::before {
     content: "";
     display: inline-block;
     width: 16px;
     height: 16px;
-    margin-right: 2px;
+    margin-right: 6px;
     background-repeat: no-repeat;
     background-size: 16px 16px;
     transition: transform 0.2s ease;
-
-    /* SVG inline (chevron) con fill #009739 */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23009739' d='M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z'/%3E%3C/svg%3E");
 }
-
-/* Rotación cuando el expander está abierto */
 .stExpander[open] summary::before,
 details[open] > summary::before {
     transform: rotate(90deg);
 }
 
-
+/* Caja visual del expander */
+.stExpander {
+    border: 1.5px solid #009739;
+    border-radius: 12px;
+    margin-bottom: 0.8em;
+    background-color: #f9fffa;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
