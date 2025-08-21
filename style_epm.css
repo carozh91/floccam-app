@@ -121,19 +121,56 @@ tbody td {
     font-size: 1.05rem;
 }
 
-.stExpander summary svg {
-    fill: #009739 !important;
-    width: 1em !important;
-    height: 1em !important;
-    margin-right: 6px;
-}
 
-/* Evita que aparezca el texto "key… arrow-right" superpuesto */
-.stExpander summary [data-testid="stMarkdownContainer"] p {
-    display: inline;
-}
 
 /* Caja alrededor de cada expander */
+.stExpander {
+    border: 1.5px solid #009739;
+    border-radius: 12px;
+    margin-bottom: 0.8em;
+    background-color: #f9fffa;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* ===== EXPANDERS con ícono SVG verde ===== */
+
+/* Encabezado del expander */
+.stExpander summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    color: #009739;
+    font-size: 1.05rem;
+}
+
+/* Oculta solo el primer span (el ícono roto por defecto) */
+.stExpander summary span:first-child {
+    display: none !important;
+}
+
+/* Nuestro ícono SVG (flecha) en verde */
+.stExpander summary::before {
+    content: "";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 2px;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    transition: transform 0.2s ease;
+
+    /* SVG inline (chevron) con fill #009739 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23009739' d='M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z'/%3E%3C/svg%3E");
+}
+
+/* Rotación cuando el expander está abierto */
+.stExpander[open] summary::before,
+details[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+/* Caja visual del expander */
 .stExpander {
     border: 1.5px solid #009739;
     border-radius: 12px;
