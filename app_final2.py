@@ -16,6 +16,7 @@ from mysql.connector import Error
 # === Configuración de página (debe ir ANTES de cualquier otro st.*) ===
 st.set_page_config(
     page_title="Floccam Analyzer — EPM",
+    page_icon="logo_epm.png",   # <- usa tu logo (mismo archivo que ya cargamos)
     layout="wide",
     initial_sidebar_state="expanded",
 )
