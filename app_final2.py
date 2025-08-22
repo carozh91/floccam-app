@@ -395,20 +395,19 @@ st.markdown(f"""
 <style>
 .app-topbar {{
   display: flex;
-  align-items: center;
+  align-items: flex-start;      /* sube el contenido sin cortarlo */
   gap: 12px;
-  margin: 6px 0 14px 0;
-  padding-top: 12px;            /* <- agrega espacio arriba para evitar recorte */
-  overflow: visible !important; /* <- asegura que nada se corte */
+  margin: 0 0 14px 0;           /* quita margen superior */
+  padding: 12px 0 0 0;          /* espacio arriba para evitar recorte */
+  height: 68px;                 /* garantiza altura suficiente */
+  overflow: visible !important; /* nada se corta */
 }}
-/* Fuerza proporción y evita que CSS global distorsione el logo */
 .app-topbar img {{
-  height: 48px !important;        /* ajusta si lo quieres más grande/pequeño */
-  width: auto !important;          /* NO estirar horizontalmente */
-  max-width: 260px !important;     /* límite por si el PNG es grande */
-  object-fit: contain !important;  /* respeta proporciones */
-  display: block !important;       /* evita desplazamientos por baseline */
-  image-rendering: auto;
+  height: 50px !important;      /* tamaño del logo */
+  width: auto !important;
+  max-width: 260px !important;
+  object-fit: contain !important;
+  display: block !important;
 }}
 </style>
 <div class="app-topbar">
