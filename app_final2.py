@@ -28,13 +28,13 @@ def get_db_connection(mysql_password=None):
         )
     except Exception:
         return mysql.connector.connect(
-            host="localhost", user="root", password=mysql_password or "Emanuel10*", database="mediciones_db"
-
-def get_conn():
-    """Conexión segura en cualquier contexto (Cloud/Local)."""
-    return get_db_connection(st.session_state.get("mysql_password", None))
+            host="localhost",
+            user="root",
+            password=mysql_password or "Emanuel10*",
+            database="mediciones_db",
+            port=3306,
         )
-    
+
 def bootstrap_graficos_table():
     ddl = """
     CREATE TABLE IF NOT EXISTS graficos (
