@@ -114,6 +114,40 @@ def bootstrap_graficos_indexes():
     except Exception as e:
         st.warning(f"No pude crear/verificar índices en 'graficos': {e}")
 
+def bootstrap_historico_indexes():
+    """Crea índices para acelerar consultas en la pestaña Históricos."""
+    try:
+        mysql_pwd = st.session_state.get("mysql_password", None)
+        conn = get_db_connection(mysql_pwd)
+        if not conn:
+            return
+        cur = conn.cursor()
+
+        def _ensure_index(index_name: str, cols: str):
+            cur.execute(
+                """
+                SELECT COUNT(1)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'historico'
+                  AND index_name = %s
+                """,
+                (index_name,),
+            )
+            exists = cur.fetchone()[0] > 0
+            if not exists:
+                cur.execute(f"CREATE INDEX {index_name} ON historico ({cols})")
+
+        # Para SELECT DISTINCT planta / fecha y filtros por planta+fecha
+        _ensure_index("idx_hist_pf", "planta, fecha")
+        # Para filtros + agrupaciones por nombre_medicion en esa misma combinación
+        _ensure_index("idx_hist_pf_nom", "planta, fecha, nombre_medicion")
+
+        conn.commit()
+        cur.close(); conn.close()
+    except Exception as e:
+        st.warning(f"No pude crear/verificar índices en 'historico': {e}")
+
 
 def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
     """Lectura de imágenes desde BD, tolerante para TVD por patrón de filename."""
@@ -225,6 +259,7 @@ if "schema_ready" not in st.session_state:
     try:
         bootstrap_graficos_table()
         bootstrap_graficos_indexes()
+        bootstrap_historico_indexes()
         st.session_state["schema_ready"] = True
     except Exception as _e:
         st.warning(f"Bootstrap de BD falló: {_e}")
