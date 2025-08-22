@@ -523,26 +523,56 @@ columnas_mediciones = [
     'sphericity', 'clarity', 'largestfloc'
 ]
 
-# --- Navegación fija en la barra lateral (sidebar) ---
+# --- Barra lateral: Estado del sistema + Acciones rápidas + Consejos ---
 with st.sidebar:
-    st.markdown("### Navegación")
-    seccion_nav = st.radio(
-        " ",
-        [
-            "📝 Ingreso de información",
-            "🔬 Procesamiento",
-            "📈 Comparativos",
-            "📊 Otros gráficos",
-            "💾 Guardar información",
-            "📂 Históricos",
-        ],
-        index=0,
-        key="nav_epm",
-        label_visibility="collapsed",
-    )
+    st.markdown("### Estado del sistema")
+
+    # Pill helper simple (colores EPM-ish)
+    def _pill(text, bg="#E3F6ED", fg="#0F7B3B"):
+        st.markdown(
+            f"<span style='background:{bg}; color:{fg}; padding:4px 10px; border-radius:12px; font-size:0.85em; display:inline-block;'>{text}</span>",
+            unsafe_allow_html=True,
+        )
+
+    # 🔌 Salud de la BD (prueba rápida)
+    ok_db = False
+    try:
+        _pwd = st.session_state.get("mysql_password", None)
+        _conn = get_db_connection(_pwd)
+        if _conn:
+            _cur = _conn.cursor()
+            _cur.execute("SELECT 1")
+            _cur.fetchone()
+            ok_db = True
+            _cur.close(); _conn.close()
+    except Exception:
+        ok_db = False
+
+    if ok_db:
+        _pill("BD conectada")
+    else:
+        _pill("BD desconectada", bg="#FDECEC", fg="#B3261E")
+
+    # Resumen rápido de sesión
+    st.write(f"🖼️ Gráficos en memoria: **{len(st.session_state.get('graficos_temp', {}))}**")
+    st.write(f"📄 CSVs en memoria: **{len(st.session_state.get('csvs_temp', {}))}**")
 
     st.markdown("---")
-    st.caption("La navegación lateral siempre está visible. Puedes seguir usando las pestañas arriba; en los próximos pasos migraremos cada sección a este menú.")
+    st.markdown("### Acciones rápidas")
+    if st.button("🧹 Limpiar temporales", use_container_width=True):
+        st.session_state.pop("graficos_temp", None)
+        st.session_state.pop("csvs_temp", None)
+        st.session_state.pop("df_resumen_db", None)
+        st.success("Temporales limpiados.")
+
+    st.markdown("---")
+    with st.expander("💡 Consejos y atajos"):
+        st.markdown(
+            "- Desplaza la barra de pestañas ↔ para ver más secciones.\n"
+            "- En **Históricos**, puedes eliminar mediciones y sus gráficos asociados.\n"
+            "- Los **gráficos** y **CSV** se guardan cuando confirmas en **Guardar información**.\n"
+            "- Si el logo se viera recortado, actualiza la página (F5)."
+        )
 
 
 # --- Tabs principales 
