@@ -403,7 +403,7 @@ st.markdown(f"""
 }}
 /* Fuerza proporción y evita que CSS global distorsione el logo */
 .app-topbar img {{
-  height: 56px !important;        /* ajusta si lo quieres más grande/pequeño */
+  height: 48px !important;        /* ajusta si lo quieres más grande/pequeño */
   width: auto !important;          /* NO estirar horizontalmente */
   max-width: 260px !important;     /* límite por si el PNG es grande */
   object-fit: contain !important;  /* respeta proporciones */
