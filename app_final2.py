@@ -402,6 +402,23 @@ columnas_mediciones = [
     'sphericity', 'clarity', 'largestfloc'
 ]
 
+# Permitir scroll horizontal en la fila de tabs (por si se oculta la última)
+st.markdown("""
+<style>
+/* Fila de pestañas desplazable si hay muchas etiquetas */
+.stTabs [data-baseweb="tab-list"] {
+    overflow-x: auto !important;
+    white-space: nowrap;
+    scroll-behavior: smooth;
+}
+/* Evitar que las tabs se “rompan” a otra línea */
+.stTabs [data-baseweb="tab"] {
+    white-space: nowrap !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # Tabs principales
 tab_ingreso, tab_procesamiento, tab_comparativos, tab_graficos, tab_guardar, tab_historicos = st.tabs([
     "📝 Ingreso de información",
