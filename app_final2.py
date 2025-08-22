@@ -395,11 +395,11 @@ st.markdown(f"""
 <style>
 .app-topbar {{
   display: flex;
-  align-items: flex-start;      /* sube el contenido sin cortarlo */
+  align-items: center;
   gap: 12px;
   margin: 0 0 14px 0;           /* quita margen superior */
-  padding: 12px 0 0 0;          /* espacio arriba para evitar recorte */
-  height: 68px;                 /* garantiza altura suficiente */
+  padding: 22px 0 0 0;          /* espacio arriba para evitar recorte */
+  
   overflow: visible !important; /* nada se corta */
 }}
 .app-topbar img {{
