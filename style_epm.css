@@ -218,3 +218,32 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
   padding: 0.70rem 1rem;
   font-size: 1rem;
 }
+
+/* === Encabezado: logo + título (responsive, sin recortes) === */
+.app-topbar{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0 0 14px 0;
+  padding:18px 0 0 0;          /* aire arriba para evitar recorte */
+  overflow:visible;
+  flex-wrap:wrap;               /* si no cabe, el título baja */
+}
+.app-topbar img{
+  height:44px;                  /* ajusta tamaño del logo si quieres */
+  width:auto;
+  max-width:240px;
+  object-fit:contain;
+  display:block;
+}
+.app-title-wrap{
+  flex:1;
+  min-width:220px;              /* evita que se aplaste en pantallas estrechas */
+}
+.app-title{
+  color:var(--epm-green, #009739);
+  font-weight:700;
+  line-height:1.15;
+  margin:0;
+  font-size:clamp(18px, 2.2vw, 28px); /* responsive */
+}
