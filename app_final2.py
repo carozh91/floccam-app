@@ -14,7 +14,7 @@ from mysql.connector import Error
 # ===== DB Bootstrap & Helpers (auto-added) =====
 
 # === Favicon limpio a partir del logo (cuadra y centra con transparencia) ===
-def _make_square_icon(path, size=280, bg=(0, 0, 0, 0)):
+def _make_square_icon(path, size=256, bg=(0, 0, 0, 0)):
     try:
         im = Image.open(path).convert("RGBA")
         w, h = im.size
@@ -535,7 +535,7 @@ def extraer_dosis(nombre_medicion):
 
 # 📥 INGRESO DE INFORMACIÓN
 with tab_ingreso:
-    st.subheader("Ingreso de parámetros y carga de datos")
+    #st.subheader("Ingreso de parámetros y carga de datos")
  # 🔁 Botón temporal para reiniciar estado (útil para desarrollo)
     if st.button("🧹 Resetear estado (debug)"):
         for key in list(st.session_state.keys()):
