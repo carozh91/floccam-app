@@ -93,7 +93,9 @@ def bootstrap_graficos_indexes():
 def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
     """Lectura de imágenes desde BD, tolerante para TVD por patrón de filename."""
     import re as _re
-    conn = get_db_connection(mysql_password) if mysql_password is not None else get_conn()
+    # Resolver password de forma explícita y SIEMPRE usar get_db_connection
+    mysql_pwd = mysql_password if mysql_password is not None else st.session_state.get("mysql_password", None)
+    conn = get_db_connection(mysql_pwd)
     if not conn:
         return []
     cur = conn.cursor()
@@ -155,7 +157,8 @@ def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_pas
 def precompute_otros_desde_db(mysql_password=None):
     """Genera 'Otros' (largestfloc, mass_fraction, clarity, fractal_dimension) en modo headless."""
     try:
-        conn = get_db_connection(mysql_password) if mysql_password is not None else get_conn()
+        mysql_pwd = mysql_password if mysql_password is not None else st.session_state.get("mysql_password", None)
+        conn = get_db_connection(mysql_pwd)
         if not conn:
             return
         cur = conn.cursor()
