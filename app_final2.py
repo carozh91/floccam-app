@@ -1,14 +1,207 @@
-import streamlit as st
-import pandas as pd
+import os, io, re, base64
+from pathlib import Path  # <- Si no lo usas más abajo, puedes borrarlo luego.
+import datetime           # <- Si no lo usas más abajo, puedes borrarlo luego.
+
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-import mysql.connector
-import io
-import os
-import re
-import datetime
-from pathlib import Path
 from PIL import Image
+
+import streamlit as st
+import mysql.connector
+from mysql.connector import Error
+
+# ===== DB Bootstrap & Helpers (auto-added) =====
+def get_db_connection(mysql_password=None):
+    """
+    Devuelve una conexión mysql.connector.connect.
+    - Si st.secrets['mysql'] existe (Streamlit Cloud / .streamlit/secrets.toml), lo usa.
+    - Si no, hace fallback a localhost usando mysql_password (uso local).
+    """
+    try:
+        cfg = st.secrets["mysql"]
+        host = cfg.get("host"); user = cfg.get("user")
+        password = cfg.get("password"); database = cfg.get("database")
+        port = int(cfg.get("port")) if cfg.get("port") else 3306
+        return mysql.connector.connect(
+            host=host, user=user, password=password, database=database, port=port
+        )
+    except Exception:
+        return mysql.connector.connect(
+            host="localhost", user="root", password=mysql_password or "Emanuel10*", database="mediciones_db"
+
+def get_conn():
+    """Conexión segura en cualquier contexto (Cloud/Local)."""
+    return get_db_connection(st.session_state.get("mysql_password", None))
+        )
+    
+def bootstrap_graficos_table():
+    ddl = """
+    CREATE TABLE IF NOT EXISTS graficos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      planta VARCHAR(100) NOT NULL,
+      fecha DATE NOT NULL,
+      nombre_medicion VARCHAR(255) NOT NULL,
+      tipo VARCHAR(80) DEFAULT NULL,
+      nombre_archivo VARCHAR(255) NOT NULL,
+      formato VARCHAR(10) DEFAULT 'PNG',
+      imagen_blob LONGBLOB NOT NULL,
+      ancho INT DEFAULT NULL,
+      alto INT DEFAULT NULL,
+      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    try:
+        conn = get_conn()
+        if conn:
+            cur = conn.cursor()
+            cur.execute(ddl)
+            conn.commit()
+            cur.close(); conn.close()
+    except Exception as e:
+        st.warning(f"No pude crear/verificar la tabla graficos: {e}")
+
+def bootstrap_graficos_indexes():
+    """Crea índices útiles si no existen (seguro de correr muchas veces)."""
+    try:
+        conn = get_conn()
+        if not conn:
+            return
+        cur = conn.cursor()
+
+        def _ensure_index(index_name: str, cols: str):
+            cur.execute(
+                """
+                SELECT COUNT(1)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'graficos'
+                  AND index_name = %s
+                """, (index_name,))
+            exists = cur.fetchone()[0] > 0
+            if not exists:
+                cur.execute(f"CREATE INDEX {index_name} ON graficos ({cols})")
+
+        _ensure_index("idx_graficos_pftm", "planta, fecha, tipo, nombre_medicion")
+        _ensure_index("idx_graficos_pfta", "planta, fecha, tipo, nombre_archivo")
+
+        conn.commit()
+        cur.close(); conn.close()
+    except Exception as e:
+        st.warning(f"No pude crear/verificar índices en 'graficos': {e}")
+
+def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
+    """Lectura de imágenes desde BD, tolerante para TVD por patrón de filename."""
+    import re as _re
+    conn = get_db_connection(mysql_password) if mysql_password is not None else get_conn()
+    if not conn:
+        return []
+    cur = conn.cursor()
+
+    def _safe(s: str) -> str:
+        return _re.sub(r"\W+", "_", (s or "").lower()).strip("_")
+
+    # Caso especial: TVD con nombre, tolerante al tipo
+    if tipo == 'tiempo_vs_diametro' and nombre_medicion is not None:
+        base = (nombre_medicion or "").lower()
+        nombre_safe = _safe(base)
+        q = """
+            SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo
+            FROM graficos
+            WHERE planta = %s AND fecha = %s
+              AND (
+                    (tipo = 'tiempo_vs_diametro' AND (
+                         nombre_medicion = %s
+                      OR LOWER(nombre_medicion) = %s
+                      OR nombre_archivo LIKE %s
+                    ))
+                 OR (nombre_archivo LIKE %s AND nombre_archivo NOT LIKE 'grafico_%%')
+              )
+            ORDER BY id
+        """
+        params = [planta, fecha, nombre_medicion, base, f"{nombre_safe}_grafico_%", f"{nombre_safe}_grafico_%"]
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return rows
+
+    # Resto de casos
+    q = """
+        SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo
+        FROM graficos
+        WHERE planta = %s AND fecha = %s
+    """
+    params = [planta, fecha]
+    if tipo:
+        q += " AND tipo = %s"
+        params.append(tipo)
+    if nombre_medicion is not None:
+        base = (nombre_medicion or "").lower()
+        nombre_safe = _safe(base)
+        q += """
+            AND (
+                 nombre_medicion = %s
+              OR LOWER(nombre_medicion) = %s
+              OR nombre_archivo LIKE %s
+            )
+        """
+        params += [nombre_medicion, base, f"{nombre_safe}_grafico_%"]
+    q += " ORDER BY id"
+    cur.execute(q, tuple(params))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return rows
+
+def precompute_otros_desde_db(mysql_password=None):
+    """Genera 'Otros' (largestfloc, mass_fraction, clarity, fractal_dimension) en modo headless."""
+    try:
+        conn = get_db_connection(mysql_password) if mysql_password is not None else get_conn()
+        if not conn:
+            return
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM mediciones")
+        df_total = pd.DataFrame(cur.fetchall(), columns=[c[0] for c in cur.description])
+        cur.close(); conn.close()
+    except Exception as e:
+        st.warning(f"No pude leer 'mediciones' para precalcular 'Otros': {e}")
+        return
+    if df_total.empty:
+        return
+
+    variables = ["largestfloc", "mass_fraction", "clarity", "fractal_dimension"]
+    for medicion_sel, grupo in df_total.groupby("nombre_medicion"):
+        grupo = grupo.sort_values("unix_time").copy()
+        if "unix_time" not in grupo.columns:
+            continue
+        grupo["tiempo"] = grupo["unix_time"] - grupo["unix_time"].min()
+        for variable_sel in variables:
+            if variable_sel not in grupo.columns:
+                continue
+            y = grupo[variable_sel].to_numpy()
+            t = grupo["tiempo"].to_numpy()
+            if y.size == 0:
+                continue
+            fig, ax = plt.subplots()
+            ax.plot(t, y, marker="o", label=variable_sel)
+            ax.legend()
+            try:
+                fig = estilizar_grafico(fig, ax, f"{variable_sel} en el tiempo - {medicion_sel}", ylabel=variable_sel)
+            except Exception:
+                pass
+            nombre_archivo = f"otros_{medicion_sel}_{variable_sel}.png"
+            store_fig_in_memory(fig, nombre_archivo)
+            plt.close(fig)
+
+# --- Bootstrap de BD (una vez por sesión) ---
+if "schema_ready" not in st.session_state:
+    try:
+        bootstrap_graficos_table()
+        bootstrap_graficos_indexes()
+        st.session_state["schema_ready"] = True
+    except Exception as _e:
+        st.warning(f"Bootstrap de BD falló: {_e}")
+
+
 
 # ------------------- INICIO: helpers para guardado temporal -------------------
 if "graficos_temp" not in st.session_state:
@@ -39,42 +232,51 @@ def persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
     """
     os.makedirs(output_folder, exist_ok=True)
 
-    # 1) Escribir imágenes a disco y BD
-    conn_g = get_db_connection(mysql_password)
-    cur_g = conn_g.cursor()
-
+    # 1) Escribir imágenes a disco (opcional)
     for fname, b in st.session_state.get("graficos_temp", {}).items():
-        # (a) Guardado en disco (opcional, útil en local)
         with open(os.path.join(output_folder, fname), "wb") as f:
             f.write(b)
 
-        # (b) Derivar tipo / nombre_medicion desde el nombre del archivo
-        # Convenciones actuales en tu app:
-        #   "{nombre_safe}_grafico_{planta_safe}_{YYYYMMDD}.png"         -> tipo='tiempo_vs_diametro'
-        #   "grafico_*{planta_safe}_{YYYYMMDD}.png"                       -> tipo='comparativo'
-        #   "otros_{nombre_safe}_{variable}.png"                          -> tipo='otros'
-        tipo = 'otros'
-        nombre_medicion = ''
-        if '_grafico_' in fname:
-            tipo = 'tiempo_vs_diametro'
-            nombre_medicion = fname.split('_grafico_')[0]
-        elif fname.startswith('grafico_'):
-            tipo = 'comparativo'
-            nombre_medicion = ''  # comparativos globales
+    # 2) Guardar imágenes en BD (tabla graficos) UNA SOLA VEZ
+    try:
+        conn_g = get_db_connection(mysql_password)
+        cur_g = conn_g.cursor()
 
-        # (c) Insertar BLOB en BD
-        cur_g.execute("""
-            INSERT INTO graficos(planta, fecha, nombre_medicion, tipo, nombre_archivo, formato, imagen_blob)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (planta, fecha_analisis, nombre_medicion, tipo, fname, 'PNG', b))
+        for fname, b in st.session_state.get("graficos_temp", {}).items():
+            # Derivar tipo / nombre_medicion desde el nombre del archivo
+            # Convenciones actuales:
+            #   "{nombre_safe}_grafico_..." -> tipo='tiempo_vs_diametro'
+            #   "grafico_..."               -> tipo='comparativo'
+            #   "otros_{medicion}_{var}.png"-> tipo='otros'
+            tipo = 'otros'
+            nombre_medicion = ''
 
-    conn_g.commit()
-    cur_g.close()
-    conn_g.close()
+            if fname.startswith('otros_'):
+                base_noext = fname[:-4] if fname.lower().endswith('.png') else fname
+                resto = base_noext.split('otros_', 1)[-1]
+                parts = resto.split('_')
+                if len(parts) > 1:
+                    nombre_medicion = '_'.join(parts[:-1])
 
+            if '_grafico_' in fname and not fname.startswith('grafico_'):
+                tipo = 'tiempo_vs_diametro'
+                nombre_medicion = fname.split('_grafico_')[0]
+            elif fname.startswith('grafico_'):
+                tipo = 'comparativo'
+                # nombre_medicion se queda ''
 
-    
+            cur_g.execute(
+                """
+                INSERT INTO graficos(planta, fecha, nombre_medicion, tipo, nombre_archivo, formato, imagen_blob)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (planta, fecha_analisis, nombre_medicion, tipo, fname, 'PNG', b)
+            )
 
+        conn_g.commit()
+        cur_g.close(); conn_g.close()
+    except Exception as e:
+        st.warning(f"No pude insertar imágenes en 'graficos': {e}")
 
     # 3) Insertar en historico (si existe df_resumen_db en sesión)
     df_db = st.session_state.get("df_resumen_db")
@@ -110,198 +312,13 @@ def persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
         cursor.close()
         conn.close()
 
-   
-
-    # 6) Limpiar temporales de sesión
+    # 5) Limpiar temporales de sesión
     st.session_state.pop("graficos_temp", None)
     st.session_state.pop("csvs_temp", None)
     st.session_state.pop("df_resumen_db", None)
 
     st.success("✅ Proyecto guardado en disco y en la tabla `historico`.")
-# ------------------- FIN: helpers para guardado temporal -------------------
 
-def get_db_connection(mysql_password=None):
-    """
-    Devuelve una conexión mysql.connector.connect.
-    - Si st.secrets['mysql'] existe (Streamlit Cloud / .streamlit/secrets.toml), lo usa.
-    - Si no, hace fallback a localhost usando mysql_password (uso local).
-    """
-    # Intentar usar st.secrets si está disponible
-    try:
-        cfg = st.secrets["mysql"]
-        host = cfg.get("host")
-        user = cfg.get("user")
-        password = cfg.get("password")
-        database = cfg.get("database")
-        port = int(cfg.get("port")) if cfg.get("port") else 3306
-        return mysql.connector.connect(
-            host=host, user=user, password=password, database=database, port=port
-        )
-    except Exception:
-        # Fallback a conexión local (usa mysql_password si fue provisto)
-        return mysql.connector.connect(
-            host="localhost", user="root", password=mysql_password or "Emanuel10*", database="mediciones_db"
-        )
-def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
-    """
-    Trae imágenes desde la tabla `graficos`.
-    Para 'tiempo_vs_diametro' con nombre especificado, relajamos el filtro de `tipo` y
-    confiamos además en el patrón del filename '<nombre_safe>_grafico_%' para no perder nada.
-    """
-    import re
-    conn = get_db_connection(mysql_password)
-    cur = conn.cursor()
-
-    # Normaliza para construir el patrón del filename
-    def _safe(s: str) -> str:
-        return re.sub(r"\W+", "_", (s or "").lower()).strip("_")
-
-    # Caso ESPECIAL: tiempo_vs_diametro + nombre dado -> filtro tolerante
-    if tipo == 'tiempo_vs_diametro' and nombre_medicion is not None:
-        base = (nombre_medicion or "").lower()
-        nombre_safe = _safe(base)
-
-        q = """
-            SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo
-            FROM graficos
-            WHERE planta = %s AND fecha = %s
-              AND (
-                    -- 1) Coincidencia por tipo correcto + nombre
-                    (tipo = 'tiempo_vs_diametro' AND (
-                          nombre_medicion = %s
-                       OR LOWER(nombre_medicion) = %s
-                       OR nombre_archivo LIKE %s
-                    ))
-                    -- 2) O bien: patrón de filename típico de TVD (para casos mal etiquetados),
-                    -- evitando archivos comparativos que empiezan por 'grafico_'
-                 OR (nombre_archivo LIKE %s AND nombre_archivo NOT LIKE 'grafico_%%')
-              )
-            ORDER BY id
-        """
-        params = [planta, fecha, nombre_medicion, base, f"{nombre_safe}_grafico_%", f"{nombre_safe}_grafico_%"]
-
-        cur.execute(q, tuple(params))
-        rows = cur.fetchall()
-        cur.close(); conn.close()
-        return rows
-
-    # Resto de casos (comparativos, otros, o TVD sin nombre)
-    q = """
-        SELECT nombre_archivo, formato, imagen_blob, nombre_medicion, tipo
-        FROM graficos
-        WHERE planta = %s AND fecha = %s
-    """
-    params = [planta, fecha]
-
-    if tipo:
-        q += " AND tipo = %s"
-        params.append(tipo)
-
-    if nombre_medicion is not None:
-        base = (nombre_medicion or "").lower()
-        nombre_safe = _safe(base)
-        q += """
-            AND (
-                 nombre_medicion = %s
-              OR LOWER(nombre_medicion) = %s
-              OR nombre_archivo LIKE %s
-            )
-        """
-        params += [nombre_medicion, base, f"{nombre_safe}_grafico_%"]
-
-    q += " ORDER BY id"
-    cur.execute(q, tuple(params))
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return rows
-
-
-def bootstrap_graficos_table():
-    ddl = """
-    CREATE TABLE IF NOT EXISTS graficos (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      planta VARCHAR(100) NOT NULL,
-      fecha DATE NOT NULL,
-      nombre_medicion VARCHAR(255) NOT NULL,
-      tipo VARCHAR(80) DEFAULT NULL,
-      nombre_archivo VARCHAR(255) NOT NULL,
-      formato VARCHAR(10) DEFAULT 'PNG',
-      imagen_blob LONGBLOB NOT NULL,
-      ancho INT DEFAULT NULL,
-      alto INT DEFAULT NULL,
-      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    """
-    try:
-        conn = get_db_connection(st.session_state.get("mysql_password", None))
-        cur = conn.cursor()
-        cur.execute(ddl)
-        conn.commit()
-        cur.close(); conn.close()
-    except Exception as e:
-        st.error("No pude crear/verificar la tabla graficos.")
-        st.exception(e)
-
-# Ejecutar el bootstrap al iniciar la app
-bootstrap_graficos_table()
-
-def bootstrap_graficos_indexes():
-    """
-    Crea índices si no existen (seguro de correr múltiples veces).
-    Optimiza consultas por planta, fecha, tipo y nombre_*.
-    """
-    try:
-        conn = get_db_connection(st.session_state.get("mysql_password", None))
-        cur = conn.cursor()
-
-        def _ensure_index(index_name: str, cols: str):
-            # ¿ya existe?
-            cur.execute(
-                """
-                SELECT COUNT(1)
-                FROM information_schema.statistics
-                WHERE table_schema = DATABASE()
-                  AND table_name = 'graficos'
-                  AND index_name = %s
-                """,
-                (index_name,),
-            )
-            exists = cur.fetchone()[0] > 0
-            if not exists:
-                cur.execute(f"CREATE INDEX {index_name} ON graficos ({cols})")
-
-        # Igualdad en (planta, fecha, tipo) + búsqueda por nombre_medicion
-        _ensure_index("idx_graficos_pftm", "planta, fecha, tipo, nombre_medicion")
-        # Igualdad en (planta, fecha, tipo) + LIKE 'prefijo_%' sobre nombre_archivo
-        _ensure_index("idx_graficos_pfta", "planta, fecha, tipo, nombre_archivo")
-
-        conn.commit()
-        cur.close(); conn.close()
-    except Exception as e:
-        st.warning("No pude crear/verificar índices en 'graficos'.")
-        st.exception(e)
-
-# 👇 Llama a la función justo después de definirla (y después de bootstrap_graficos_table)
-bootstrap_graficos_indexes()
-
-
-
-def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-local_css("style_epm.css")  # Asegúrate de que el archivo esté en el mismo directorio
-
-# Configuración global
-st.set_page_config(page_title="App - Procesamiento de Mediciones", layout="wide")
-with st.sidebar:
-    st.image("logo_epm.png", width=160)
-    st.markdown("<h2 style='color:#009739; margin-top: -10px;'>Floccam Analyzer</h2>", unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown("Bienvenido al sistema de análisis de floculación.")
-    st.markdown("Selecciona una pestaña para comenzar.")
-
-import base64
 
 def img_to_base64(img_path):
     with open(img_path, "rb") as f:
@@ -877,21 +894,27 @@ with tab_guardar:
                             # Eliminar gráficos asociados
                             for archivo in Path(output_folder).glob(f"*{planta}_{fecha_analisis.strftime('%Y%m%d')}*.png"):
                                 archivo.unlink(missing_ok=True)
+# Precompute 'Otros' en modo headless si fue seleccionado
+if st.session_state.get("guardar_otros", False):
+    precompute_otros_desde_db(st.session_state.get("mysql_password", None))
+persist_saved_project(output_folder, fecha_analisis, planta, None)
+st.success("✅ Proyecto sobrescrito correctamente.")
 
-                            persist_saved_project(output_folder, fecha_analisis, planta, None)
-                            st.success("✅ Proyecto sobrescrito correctamente.")
-
-                        elif opcion == "Guardar como nueva copia":
-                            copia_num = 1
-                            for fname in list(st.session_state["graficos_temp"].keys()):
+elif opcion == "Guardar como nueva copia":
+    copia_num = 1
+        for fname in list(st.session_state["graficos_temp"].keys()):
                                 nuevo_nombre = fname.replace(
                                     f"{planta}_{fecha_analisis.strftime('%Y%m%d')}",
                                     f"{planta}_{fecha_analisis.strftime('%Y%m%d')}_copia{copia_num}"
-                                )
+                       
+# Precompute 'Otros' en modo headless si fue seleccionado
+if st.session_state.get("guardar_otros", False):
+    precompute_otros_desde_db(st.session_state.get("mysql_password", None))
+         )
                                 st.session_state["graficos_temp"][nuevo_nombre] = st.session_state["graficos_temp"].pop(fname)
                                 copia_num += 1
 
-                            persist_saved_project(output_folder, fecha_analisis, planta, None)
+    persist_saved_project(output_folder, fecha_analisis, planta, None)
                             st.success("✅ Proyecto guardado como nueva copia.")
 
                     else:
@@ -1011,7 +1034,7 @@ with tab_historicos:
         
 
         with st.expander("🖼️ Ver gráficos guardados"):
-            
+            st.markdown("Selecciona los tipos de gráficos que deseas visualizar:")
             # Leemos desde la BD (tabla graficos)
             mysql_password_hist = st.session_state.get("mysql_password", None)
 
@@ -1030,7 +1053,7 @@ with tab_historicos:
                         nombre_medicion=nombre,           # ahora filtramos en SQL
                         mysql_password=mysql_password_hist
                     )
-                    rows = [r for r in rows if ("_grafico_" in r[0]) and (not r[0].startswith("grafico_"))]
+
                     if rows:
                         with st.expander(f"🧪 {nombre}"):
                             for nombre_archivo, formato, blob, _nombre_db, _tipo in rows:
@@ -1047,7 +1070,6 @@ with tab_historicos:
                     tipo='comparativo',
                     mysql_password=mysql_password_hist
                 )
-                rows = [r for r in rows if r[0].startswith("grafico_")]
                 for nombre_archivo, formato, blob, _, _ in rows:
                     with st.expander(f"📊 {nombre_archivo}"):
                         img = Image.open(io.BytesIO(blob))
@@ -1060,7 +1082,6 @@ with tab_historicos:
                     tipo='otros',
                     mysql_password=mysql_password_hist
                 )
-                rows = [r for r in rows if (not r[0].startswith("grafico_")) and ("_grafico_" not in r[0])]
                 for nombre_archivo, formato, blob, nom_med, _ in rows:
                     with st.expander(f"📌 {nombre_archivo}"):
                         img = Image.open(io.BytesIO(blob))
