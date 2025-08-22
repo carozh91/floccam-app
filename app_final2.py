@@ -13,12 +13,27 @@ from mysql.connector import Error
 
 # ===== DB Bootstrap & Helpers (auto-added) =====
 
-# === Configuración de página (debe ir ANTES de cualquier otro st.*) ===
+# === Favicon limpio a partir del logo (cuadra y centra con transparencia) ===
+def _make_square_icon(path, size=256, bg=(0, 0, 0, 0)):
+    try:
+        im = Image.open(path).convert("RGBA")
+        w, h = im.size
+        side = max(w, h)
+        canvas = Image.new("RGBA", (side, side), bg)
+        canvas.paste(im, ((side - w) // 2, (side - h) // 2), im)
+        return canvas.resize((size, size), resample=Image.LANCZOS)
+    except Exception:
+        return None
+
+icon_img = _make_square_icon("logo_epm.png", size=256)
+
 st.set_page_config(
-    page_title="Floccam Analyzer",
-    page_icon="logo_epm.png",   # <- usa tu logo (mismo archivo que ya cargamos)
+    page_title="Floccam Analyzer — EPM",
+    page_icon=(icon_img or "🧪"),  # fallback en caso de que no cargue el PNG
     layout="wide",
     initial_sidebar_state="expanded",
+)
+
 )
 
 # === Cargar estilos EPM desde archivo CSS ===
