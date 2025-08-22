@@ -398,6 +398,8 @@ st.markdown(f"""
   align-items: center;
   gap: 12px;
   margin: 6px 0 14px 0;
+  padding-top: 12px;            /* <- agrega espacio arriba para evitar recorte */
+  overflow: visible !important; /* <- asegura que nada se corte */
 }}
 /* Fuerza proporción y evita que CSS global distorsione el logo */
 .app-topbar img {{
