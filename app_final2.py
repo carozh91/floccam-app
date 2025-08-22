@@ -10,6 +10,7 @@ from PIL import Image
 import streamlit as st
 import mysql.connector
 from mysql.connector import Error
+import streamlit.components.v1 as components
 
 # ===== DB Bootstrap & Helpers (auto-added) =====
 
@@ -34,6 +35,24 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+def jump_to_tab(tab_label: str):
+    """Hace click en la pestaña cuyo texto (label) coincida exactamente."""
+    components.html(f"""
+    <script>
+    const label = `{tab_label}`.trim();
+    // Espera breve para asegurar que las tabs estén en el DOM
+    setTimeout(() => {{
+      const tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+      for (const t of tabs) {{
+        const text = (t.innerText || t.textContent || '').trim();
+        if (text === label) {{
+          t.click();
+          break;
+        }}
+      }}
+    }}, 80);
+    </script>
+    """, height=0, width=0)
 
 # === Cargar estilos EPM desde archivo CSS ===
 def local_css(path: str):
@@ -537,7 +556,8 @@ tab_ingreso, tab_procesamiento, tab_comparativos, tab_graficos, tab_guardar, tab
     "📂 Históricos"
 ])
 
-
+if st.session_state.get("goto_tab"):
+    jump_to_tab(st.session_state.pop("goto_tab"))
 
 
 # Tip visible para el usuario
@@ -595,6 +615,14 @@ with tab_ingreso:
         st.session_state["fecha_analisis"] = fecha_analisis
         st.session_state["notas"] = notas
         st.session_state["accion"] = accion
+    # --- Navegación: ir a la siguiente pestaña ---
+    st.markdown("<hr>", unsafe_allow_html=True)
+    _, _, next_col = st.columns([6, 4, 2])
+    with next_col:
+        if st.button("Siguiente ▶", key="next_from_ingreso"):
+            st.session_state["goto_tab"] = "🔬 Procesamiento"  # debe coincidir EXACTO con el label de la pestaña
+
+    
 
 
 # 🔍 PROCESAMIENTO
