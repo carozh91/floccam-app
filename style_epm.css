@@ -283,25 +283,5 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
 }
 
 
-/* === Sticky tabs (robusto) === */
-/* 1) Asegura que el ancestro no rompa el sticky */
-.main .block-container{
-  overflow: visible !important;
-}
 
-/* 2) Aplica sticky al propio contenedor de tabs */
-.main .block-container .stTabs{
-  position: sticky !important;
-  top: 60px !important;            /* ajusta a 54–64px según el alto de tu topbar */
-  z-index: 9;
-  background: #fff;
-  border-bottom: 1px solid #e5efe8;
-  padding-top: 6px;
-  margin-top: -6px;                /* compensa el padding para no mover el layout */
-}
-
-/* Opcional: mantiene el fondo de la barra al hacer scroll */
-.main .block-container .stTabs [data-baseweb="tab-list"]{
-  background: #fff;
-}
 
