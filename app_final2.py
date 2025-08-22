@@ -13,6 +13,13 @@ from mysql.connector import Error
 
 # ===== DB Bootstrap & Helpers (auto-added) =====
 
+# === Configuración de página (debe ir ANTES de cualquier otro st.*) ===
+st.set_page_config(
+    page_title="Floccam Analyzer — EPM",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
 # === Cargar estilos EPM desde archivo CSS ===
 def local_css(path: str):
     try:
