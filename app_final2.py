@@ -52,19 +52,23 @@ def bootstrap_graficos_table():
     );
     """
     try:
-        conn = get_conn()
-        if conn:
-            cur = conn.cursor()
-            cur.execute(ddl)
-            conn.commit()
-            cur.close(); conn.close()
+        mysql_pwd = st.session_state.get("mysql_password", None)
+        conn = get_db_connection(mysql_pwd)
+        if not conn:
+            return
+        cur = conn.cursor()
+        cur.execute(ddl)
+        conn.commit()
+        cur.close(); conn.close()
     except Exception as e:
         st.warning(f"No pude crear/verificar la tabla graficos: {e}")
 
+
 def bootstrap_graficos_indexes():
-    """Crea índices útiles si no existen (seguro de correr muchas veces)."""
+    """Crea índices útiles si no existen (idempotente)."""
     try:
-        conn = get_conn()
+        mysql_pwd = st.session_state.get("mysql_password", None)
+        conn = get_db_connection(mysql_pwd)
         if not conn:
             return
         cur = conn.cursor()
@@ -89,6 +93,7 @@ def bootstrap_graficos_indexes():
         cur.close(); conn.close()
     except Exception as e:
         st.warning(f"No pude crear/verificar índices en 'graficos': {e}")
+
 
 def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
     """Lectura de imágenes desde BD, tolerante para TVD por patrón de filename."""
