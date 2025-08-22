@@ -175,3 +175,46 @@ details[open] > summary::before {
     background-color: #f9fffa;
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
+
+/* === Layout helpers movidos desde app_final2.py === */
+:root { --base-font-size: 18px; }
+html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-size); }
+
+.block-container {
+  max-width: 1400px;
+  padding-top: 1.25rem;
+}
+
+/* Tabs: scroll horizontal visible + “fade” en bordes */
+.stTabs [data-baseweb="tab-list"] {
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;      /* Firefox */
+  position: relative;
+  padding-bottom: 6px;
+}
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { height: 8px; }           /* Chrome/Edge */
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb { background: #bdbdbd; border-radius: 4px; }
+.stTabs [data-baseweb="tab-list"]::before,
+.stTabs [data-baseweb="tab-list"]::after {
+  content: "";
+  position: sticky;
+  width: 36px;
+  pointer-events: none;
+  top: 0; bottom: 0;
+}
+.stTabs [data-baseweb="tab-list"]::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0));
+}
+.stTabs [data-baseweb="tab-list"]::after {
+  float: right;
+  right: 0;
+  background: linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0));
+}
+/* Tamaño/espaciado de etiquetas de los tabs */
+.stTabs [data-baseweb="tab"] {
+  white-space: nowrap;
+  padding: 0.70rem 1rem;
+  font-size: 1rem;
+}
