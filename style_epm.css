@@ -255,3 +255,29 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
 .app-topbar .app-title {
   color: var(--epm-green, #009739) !important;
 }
+
+/* === Headings en el contenido (tabs, expanders, etc.) === */
+/* Color institucional y tamaños consistentes */
+:root {
+  --epm-green: #009739;
+}
+
+.block-container h1:not(.app-title),
+.block-container h2,
+.block-container h3 {
+  color: var(--epm-green, #009739);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 6px 0 12px 0;
+}
+
+/* Tamaños responsivos coherentes entre pestañas */
+.block-container h1:not(.app-title) {  /* st.title o # en Markdown */
+  font-size: clamp(22px, 2.4vw, 30px);
+}
+.block-container h2 {                  /* st.header o ## */
+  font-size: clamp(18px, 2.0vw, 24px);
+}
+.block-container h3 {                  /* st.subheader o ### */
+  font-size: clamp(16px, 1.6vw, 20px);
+}
