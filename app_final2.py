@@ -457,32 +457,15 @@ def estilizar_grafico(fig, ax, titulo, xlabel="Tiempo (s)", ylabel=None):
     fig.tight_layout()
     return fig
 
-# --- Encabezado minimal: solo logo a la izquierda (sin banner) ---
+# --- Encabezado: logo + título (estilos en style_epm.css) ---
 st.markdown(f"""
-<style>
-.app-topbar {{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 14px 0;           /* quita margen superior */
-  padding: 22px 0 0 0;          /* espacio arriba para evitar recorte */
-  
-  overflow: visible !important; /* nada se corta */
-}}
-.app-topbar img {{
-  height: 50px !important;      /* tamaño del logo */
-  width: auto !important;
-  max-width: 260px !important;
-  object-fit: contain !important;
-  display: block !important;
-}}
-</style>
 <div class="app-topbar">
   {f'<img src="data:image/png;base64,{logo_b64}" alt="EPM" />' if logo_b64 else ''}
+  <div class="app-title-wrap">
+    <h1 class="app-title">Floccam Analyzer</h1>
+  </div>
 </div>
 """, unsafe_allow_html=True)
-
-
 
 # Carpeta para gráficos
 output_folder = "graficos_mediciones"
