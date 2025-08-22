@@ -282,13 +282,5 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
   font-size: clamp(16px, 1.6vw, 20px);
 }
 
-/* === Tabs sticky: siempre visibles al hacer scroll === */
-.stTabs [data-baseweb="tab-list"]{
-  position: sticky;
-  top: 0;                 /* si se pega demasiado arriba, puedes subir a 6-12px */
-  z-index: 5;             /* por encima del contenido */
-  background: #fff;       /* fondo sólido para que no se traslape con el contenido */
-  border-bottom: 1px solid #e5efe8;
-  padding-top: 6px;       /* pequeño aire arriba */
-  margin-top: -6px;       /* compensa el padding para no mover el layout */
-}
+
+

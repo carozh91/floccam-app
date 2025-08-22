@@ -504,7 +504,23 @@ columnas_mediciones = [
     'sphericity', 'clarity', 'largestfloc'
 ]
 
-# Tabs principales
+# --- Tabs principales dentro de un contenedor sticky ---
+st.markdown("""
+<style>
+/* Contenedor sticky para la barra de pestañas */
+.tabs-sticky{
+  position: sticky;
+  top: 0;                     /* si queda muy arriba, prueba 6px o 12px */
+  z-index: 7;
+  background: #fff;           /* fondo sólido para que no se mezcle con el contenido */
+  border-bottom: 1px solid #e5efe8;
+  padding-top: 6px;
+  margin-top: -6px;           /* compensa el padding para no empujar el layout */
+}
+</style>
+<div class="tabs-sticky">
+""", unsafe_allow_html=True)
+
 tab_ingreso, tab_procesamiento, tab_comparativos, tab_graficos, tab_guardar, tab_historicos = st.tabs([
     "📝 Ingreso de información",
     "🔬 Procesamiento",
@@ -513,6 +529,9 @@ tab_ingreso, tab_procesamiento, tab_comparativos, tab_graficos, tab_guardar, tab
     "💾 Guardar información",
     "📂 Históricos"
 ])
+
+st.markdown("</div>", unsafe_allow_html=True)  # cierre del contenedor sticky
+
 
 # Tip visible para el usuario
 st.markdown(
