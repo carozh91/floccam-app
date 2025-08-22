@@ -399,14 +399,21 @@ st.markdown(f"""
   gap: 12px;
   margin: 6px 0 14px 0;
 }}
+/* Fuerza proporción y evita que CSS global distorsione el logo */
 .app-topbar img {{
-  height: 48px;            /* Ajusta si lo quieres más grande/pequeño */
+  height: 56px !important;        /* ajusta si lo quieres más grande/pequeño */
+  width: auto !important;          /* NO estirar horizontalmente */
+  max-width: 260px !important;     /* límite por si el PNG es grande */
+  object-fit: contain !important;  /* respeta proporciones */
+  display: block !important;       /* evita desplazamientos por baseline */
+  image-rendering: auto;
 }}
 </style>
 <div class="app-topbar">
   {f'<img src="data:image/png;base64,{logo_b64}" alt="EPM" />' if logo_b64 else ''}
 </div>
 """, unsafe_allow_html=True)
+
 
 
 # Carpeta para gráficos
