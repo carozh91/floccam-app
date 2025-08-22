@@ -504,7 +504,31 @@ columnas_mediciones = [
     'sphericity', 'clarity', 'largestfloc'
 ]
 
-# Tabs principales (bloque limpio, sin wrappers)
+# --- Tabs principales (fijas al hacer scroll) ---
+st.markdown("""
+<style>
+:root{ --fixed-tabs-height: 58px; } /* altura aproximada de la barra de tabs */
+
+.stTabs:first-of-type{
+  position: fixed !important;
+  top: 60px !important;      /* ajusta según el alto del topbar (logo+título). Prueba 56–68px */
+  left: 0; 
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border-bottom: 1px solid #e5efe8;
+  padding: 6px 0 8px 0;
+}
+
+/* Ensancha el área centrada para que visualmente coincida con el contenido */
+.stTabs:first-of-type > div{
+  max-width: 1400px;         /* el mismo valor que usas para .block-container en tu CSS */
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
 tab_ingreso, tab_procesamiento, tab_comparativos, tab_graficos, tab_guardar, tab_historicos = st.tabs([
     "📝 Ingreso de información",
     "🔬 Procesamiento",
@@ -513,6 +537,12 @@ tab_ingreso, tab_procesamiento, tab_comparativos, tab_graficos, tab_guardar, tab
     "💾 Guardar información",
     "📂 Históricos"
 ])
+
+# Spacer para que el contenido no quede debajo de la barra fija de tabs
+st.markdown(
+    '<div style="height: calc(var(--fixed-tabs-height) + 16px);"></div>',
+    unsafe_allow_html=True
+)
 
 
 # Tip visible para el usuario
