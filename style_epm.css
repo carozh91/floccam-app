@@ -283,4 +283,14 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
 }
 
 
+/* === Sticky para la barra nativa de st.tabs (sin wrappers adicionales) === */
+.main .block-container .stTabs{
+  position: sticky;
+  top: 58px;            /* ~altura del topbar con logo; ajusta a 54–64px si hace falta */
+  z-index: 6;
+  background: #fff;     /* evita traslapes visuales con el contenido al hacer scroll */
+  border-bottom: 1px solid #e5efe8;
+  padding-top: 6px;
+  margin-top: -6px;     /* compensa el padding para no “empujar” el layout */
+}
 
