@@ -12,6 +12,19 @@ import mysql.connector
 from mysql.connector import Error
 
 # ===== DB Bootstrap & Helpers (auto-added) =====
+
+# === Cargar estilos EPM desde archivo CSS ===
+def local_css(path: str):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"No pude cargar {path}: {e}")
+
+# Carga el CSS (el archivo está en la misma carpeta que app_final2.py)
+local_css("style_epm.css")
+
+
 def get_db_connection(mysql_password=None):
     """
     Devuelve una conexión mysql.connector.connect.
