@@ -847,7 +847,6 @@ with tab_guardar:
                 st.session_state["guardar_comparativos"] = guardar_comparativos
                 st.session_state["guardar_otros"] = guardar_otros
                 st.session_state["confirmado_guardado"] = True
-
                 st.success("✔️ Preferencias de guardado registradas correctamente.")
 
             # Mostrar botón de guardado definitivo si ya se confirmaron las preferencias
@@ -855,23 +854,22 @@ with tab_guardar:
                 if st.button("💾 Guardar proyecto ahora"):
                     planta = st.session_state.get("planta", "")
                     fecha_analisis = st.session_state.get("fecha_analisis", "")
+                    mysql_pwd = st.session_state.get("mysql_password", None)
 
                     # Conexión flexible
-                    conn = get_db_connection(mysql_password)
-
+                    conn = get_db_connection(mysql_pwd)
                     if not conn:
                         st.error("No se pudo establecer la conexión. Ingresa la contraseña local o configura `st.secrets` en producción.")
                         st.stop()
 
-                    # Verificar si ya existe histórico de esa planta y fecha
+                    # ¿Ya existe histórico de esa planta y fecha?
                     cursor = conn.cursor()
                     cursor.execute("""
                         SELECT COUNT(*) FROM historico
                         WHERE planta = %s AND fecha = %s
                     """, (planta, fecha_analisis))
                     existe = cursor.fetchone()[0] > 0
-                    cursor.close()
-                    conn.close()
+                    cursor.close(); conn.close()
 
                     if existe:
                         opcion = st.radio(
@@ -880,45 +878,68 @@ with tab_guardar:
                         )
 
                         if opcion == "Sobrescribir el anterior":
-                            conn = get_db_connection(mysql_password)
-
+                            # Limpieza de registros previos
+                            conn = get_db_connection(mysql_pwd)
                             cursor = conn.cursor()
                             cursor.execute("""
                                 DELETE FROM historico
                                 WHERE planta = %s AND fecha = %s
                             """, (planta, fecha_analisis))
+                            # (opcional y recomendado) también limpiar BLOBs previos:
+                            try:
+                                cursor.execute("""
+                                    DELETE FROM graficos
+                                    WHERE planta = %s AND fecha = %s
+                                """, (planta, fecha_analisis))
+                            except Exception:
+                                pass
                             conn.commit()
-                            cursor.close()
-                            conn.close()
+                            cursor.close(); conn.close()
 
-                            # Eliminar gráficos asociados
-                            for archivo in Path(output_folder).glob(f"*{planta}_{fecha_analisis.strftime('%Y%m%d')}*.png"):
-                                archivo.unlink(missing_ok=True)
-# Precompute 'Otros' en modo headless si fue seleccionado
-if st.session_state.get("guardar_otros", False):
-    precompute_otros_desde_db(st.session_state.get("mysql_password", None))
-persist_saved_project(output_folder, fecha_analisis, planta, None)
-st.success("✅ Proyecto sobrescrito correctamente.")
+                            # Eliminar archivos locales asociados (si existen)
+                            try:
+                                for archivo in Path(output_folder).glob(f"*{planta}_{fecha_analisis.strftime('%Y%m%d')}*.png"):
+                                    archivo.unlink(missing_ok=True)
+                            except Exception:
+                                pass
 
-elif opcion == "Guardar como nueva copia":
-    copia_num = 1
-        for fname in list(st.session_state["graficos_temp"].keys()):
+                            # Precompute 'Otros' si corresponde
+                            if st.session_state.get("guardar_otros", False):
+                                precompute_otros_desde_db(mysql_pwd)
+
+                            # Guardado definitivo
+                            persist_saved_project(output_folder, fecha_analisis, planta, mysql_pwd)
+                            st.success("✅ Proyecto sobrescrito correctamente.")
+
+                        elif opcion == "Guardar como nueva copia":
+                            # Renombrar los artefactos en memoria con sufijo _copiaN
+                            copia_num = 1
+                            nuevos = {}
+                            for fname, b in list(st.session_state.get("graficos_temp", {}).items()):
+                                # Busca el patrón {planta}_{YYYYMMDD} en el nombre actual y añade sufijo
+                                try:
+                                    fecha_str = fecha_analisis.strftime('%Y%m%d')
+                                except Exception:
+                                    # si no es datetime/date, no forzamos
+                                    fecha_str = str(fecha_analisis)
                                 nuevo_nombre = fname.replace(
-                                    f"{planta}_{fecha_analisis.strftime('%Y%m%d')}",
-                                    f"{planta}_{fecha_analisis.strftime('%Y%m%d')}_copia{copia_num}"
-                       
-# Precompute 'Otros' en modo headless si fue seleccionado
-if st.session_state.get("guardar_otros", False):
-    precompute_otros_desde_db(st.session_state.get("mysql_password", None))
-         )
-                                st.session_state["graficos_temp"][nuevo_nombre] = st.session_state["graficos_temp"].pop(fname)
+                                    f"{planta}_{fecha_str}",
+                                    f"{planta}_{fecha_str}_copia{copia_num}"
+                                )
+                                nuevos[nuevo_nombre] = b
                                 copia_num += 1
+                            st.session_state["graficos_temp"] = nuevos
 
-    persist_saved_project(output_folder, fecha_analisis, planta, None)
+                            if st.session_state.get("guardar_otros", False):
+                                precompute_otros_desde_db(mysql_pwd)
+
+                            persist_saved_project(output_folder, fecha_analisis, planta, mysql_pwd)
                             st.success("✅ Proyecto guardado como nueva copia.")
-
                     else:
-                        persist_saved_project(output_folder, fecha_analisis, planta, None)
+                        # Guardado normal (no existía)
+                        if st.session_state.get("guardar_otros", False):
+                            precompute_otros_desde_db(mysql_pwd)
+                        persist_saved_project(output_folder, fecha_analisis, planta, mysql_pwd)
                         st.success("✅ Proyecto guardado correctamente.")
 
                 st.markdown("""
@@ -936,6 +957,7 @@ if st.session_state.get("guardar_otros", False):
                 st.success("🚫 El análisis actual ha sido eliminado.")
     else:
         st.info("ℹ️ No hay análisis procesado actualmente.")
+
 
 # 📜 HISTÓRICOS
 with tab_historicos:
