@@ -440,49 +440,33 @@ def badge_estado(texto, color="var(--epm-green, #009739)"):
 
 
 # Estilo institucional para gráficos con título y ejes personalizados
-def estilizar_grafico(fig, ax, titulo, xlabel="Tiempo (s)", ylabel=None):
-    ax.set_title(titulo, fontsize=14, fontweight="bold", color="#009739")
+def estilizar_grafico(fig, ax, titulo, xlabel="Tiempo (s)", ylabel=None,
+                      color_principal="#009739",  # verde EPM por defecto
+                      fondo_fig="#f9fdfb",        # fondo claro institucional
+                      fondo_ax="#ffffff"):        # fondo de área de gráfica
+    # Título y etiquetas
+    ax.set_title(titulo, fontsize=14, fontweight="bold", color=color_principal)
     ax.set_xlabel(xlabel, fontsize=12)
-
     if ylabel:
         ax.set_ylabel(ylabel, fontsize=12)
     else:
         ax.set_ylabel(ax.get_ylabel(), fontsize=12)
 
+    # Ticks, grilla y leyenda
     ax.tick_params(axis='both', labelsize=10)
     ax.grid(True, linestyle='--', linewidth=0.5, alpha=0.3)
-    ax.legend(loc="best", fontsize=10)
-    fig.patch.set_facecolor("#f9fdfb")
-    ax.set_facecolor("#ffffff")
+    leg = ax.legend(loc="best", fontsize=10)
+    if leg:
+        for text in leg.get_texts():
+            text.set_fontsize(10)
+
+    # Colores de fondo
+    fig.patch.set_facecolor(fondo_fig)
+    ax.set_facecolor(fondo_ax)
+
+    # Ajuste final
     fig.tight_layout()
     return fig
-
-# --- Encabezado minimal: solo logo a la izquierda (sin banner) ---
-st.markdown(f"""
-<style>
-.app-topbar {{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 14px 0;           /* quita margen superior */
-  padding: 22px 0 0 0;          /* espacio arriba para evitar recorte */
-  
-  overflow: visible !important; /* nada se corta */
-}}
-.app-topbar img {{
-  height: 50px !important;      /* tamaño del logo */
-  width: auto !important;
-  max-width: 260px !important;
-  object-fit: contain !important;
-  display: block !important;
-}}
-</style>
-<div class="app-topbar">
-  {f'<img src="data:image/png;base64,{logo_b64}" alt="EPM" />' if logo_b64 else ''}
-</div>
-""", unsafe_allow_html=True)
-
-
 
 # Carpeta para gráficos
 output_folder = "graficos_mediciones"
