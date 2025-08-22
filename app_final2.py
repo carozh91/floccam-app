@@ -399,20 +399,45 @@ def load_logo_b64():
 logo_b64 = load_logo_b64()
 
 
-# Tarjetas de KPI
+# Tarjetas de KPI (usan variables del tema, con fallback por si no cargara el CSS)
 def tarjeta_kpi(titulo, valor, unidad=""):
-    st.markdown(f"""
-        <div style="background-color:#f2fdf5; border:2px solid #009739; border-radius:10px; padding:15px; text-align:center; margin-bottom:10px;">
-            <h4 style="color:#009739; margin:0;">{titulo}</h4>
-            <p style="font-size:1.5em; font-weight:bold; margin:5px 0;">{valor} {unidad}</p>
+    st.markdown(
+        f"""
+        <div style="
+            background-color: var(--epm-green-100, #f2fdf5);
+            border: 2px solid var(--epm-green, #009739);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 10px;
+        ">
+            <h4 style="color: var(--epm-green, #009739); margin: 0;">{titulo}</h4>
+            <p style="font-size: 1.5em; font-weight: bold; margin: 5px 0;">
+                {valor} {unidad}
+            </p>
         </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
-# Badges de estado
-def badge_estado(texto, color="#009739"):
-    st.markdown(f"""
-        <span style='background-color:{color}; color:white; padding:4px 8px; border-radius:12px; font-size:0.85em;'>{texto}</span>
-    """, unsafe_allow_html=True)
+# Badges de estado (verde por defecto, acepta override con 'color')
+def badge_estado(texto, color="var(--epm-green, #009739)"):
+    st.markdown(
+        f"""
+        <span style="
+            background-color: {color};
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            display: inline-block;
+        ">
+            {texto}
+        </span>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # Estilo institucional para gráficos con título y ejes personalizados
 def estilizar_grafico(fig, ax, titulo, xlabel="Tiempo (s)", ylabel=None):
