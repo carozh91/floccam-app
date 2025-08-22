@@ -323,12 +323,21 @@ def persist_saved_project(output_folder, fecha_analisis, planta, mysql_password)
     st.success("✅ Proyecto guardado en disco y en la tabla `historico`.")
 
 
-def img_to_base64(img_path):
-    with open(img_path, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+# --- Logo EPM: loader robusto (busca en varias rutas y no rompe si falta) ---
+def load_logo_b64():
+    posibles = [
+        "logo_epm.png",
+        "assets/logo_epm.png",
+        "static/logo_epm.png",
+    ]
+    for p in posibles:
+        if os.path.exists(p):
+            with open(p, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    return None  # si no lo encuentra, seguimos sin romper la UI
 
-logo_base64 = img_to_base64("logo_epm.png")
+logo_b64 = load_logo_b64()
+
 
 # Tarjetas de KPI
 def tarjeta_kpi(titulo, valor, unidad=""):
