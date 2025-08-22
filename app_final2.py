@@ -34,7 +34,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-)
 
 # === Cargar estilos EPM desde archivo CSS ===
 def local_css(path: str):
