@@ -14,7 +14,7 @@ from mysql.connector import Error
 # ===== DB Bootstrap & Helpers (auto-added) =====
 
 # === Favicon limpio a partir del logo (cuadra y centra con transparencia) ===
-def _make_square_icon(path, size=256, bg=(0, 0, 0, 0)):
+def _make_square_icon(path, size=280, bg=(0, 0, 0, 0)):
     try:
         im = Image.open(path).convert("RGBA")
         w, h = im.size
@@ -28,7 +28,7 @@ def _make_square_icon(path, size=256, bg=(0, 0, 0, 0)):
 icon_img = _make_square_icon("logo_epm.png", size=256)
 
 st.set_page_config(
-    page_title="Floccam Analyzer — EPM",
+    page_title="Floccam Analyzer",
     page_icon=(icon_img or "🧪"),  # fallback en caso de que no cargue el PNG
     layout="wide",
     initial_sidebar_state="expanded",
