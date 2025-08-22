@@ -402,21 +402,81 @@ columnas_mediciones = [
     'sphericity', 'clarity', 'largestfloc'
 ]
 
-# Permitir scroll horizontal en la fila de tabs (por si se oculta la última)
+# === Mejoras de UI: tamaño general + barra de pestañas con scroll visible ===
 st.markdown("""
 <style>
-/* Fila de pestañas desplazable si hay muchas etiquetas */
-.stTabs [data-baseweb="tab-list"] {
-    overflow-x: auto !important;
-    white-space: nowrap;
-    scroll-behavior: smooth;
+/* 1) Escalado general de la interfaz */
+:root { --base-font-size: 18px; }               /* sube la base */
+html, body, [data-testid="stAppViewContainer"] * {
+  font-size: var(--base-font-size);
 }
-/* Evitar que las tabs se “rompan” a otra línea */
+.block-container {                               /* ensancha el lienzo */
+  max-width: 1400px; 
+  padding-top: 1.25rem;
+}
+.stButton > button {                             /* botones más grandes */
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+}
+.stSelectbox, .stTextInput, .stDateInput, .stRadio, .stCheckbox {
+  font-size: 1rem;
+}
+
+/* 2) Tabs: permitir scroll y hacerlo evidente */
+.stTabs [data-baseweb="tab-list"] {
+  overflow-x: auto !important;
+  white-space: nowrap;
+  scrollbar-width: thin;                         /* Firefox */
+  position: relative;
+  padding-bottom: 6px;                           /* deja espacio a la barra */
+}
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { /* Chrome/Edge */
+  height: 8px;
+}
+.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar-thumb {
+  background: #bdbdbd; border-radius: 4px;
+}
+
+/* Etiquetas de los tabs un poco más grandes y con más “click area” */
 .stTabs [data-baseweb="tab"] {
-    white-space: nowrap !important;
+  white-space: nowrap !important;
+  padding: 0.70rem 1rem;
+  font-size: 1rem;
+}
+
+/* Indicador visual de que hay más tabs a la derecha/izquierda (fade) */
+.stTabs [data-baseweb="tab-list"]::before,
+.stTabs [data-baseweb="tab-list"]::after {
+  content: "";
+  position: sticky;
+  width: 36px;
+  pointer-events: none;
+  top: 0; bottom: 0;
+}
+.stTabs [data-baseweb="tab-list"]::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0));
+}
+.stTabs [data-baseweb="tab-list"]::after {
+  float: right;
+  right: 0;
+  background: linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0));
+}
+
+/* 3) Ajustes para pantallas grandes */
+@media (min-width: 1400px) {
+  :root { --base-font-size: 19px; }
+  .block-container { max-width: 1500px; }
+  .stTabs [data-baseweb="tab"] { font-size: 1.05rem; }
+}
+
+/* 4) Móviles: etiqueta de ayuda más corta */
+@media (max-width: 900px) {
+  .tab-help { font-size: 0.85rem; }
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # Tabs principales
@@ -428,6 +488,14 @@ tab_ingreso, tab_procesamiento, tab_comparativos, tab_graficos, tab_guardar, tab
     "💾 Guardar información",
     "📂 Históricos"
 ])
+
+# Tip visible para el usuario
+st.markdown(
+    "<div class='tab-help' style='color:#777; margin:-6px 0 10px 2px;'>"
+    "Sugerencia: desplaza la barra de pestañas ↔ para ver más secciones."
+    "</div>",
+    unsafe_allow_html=True
+)
 
 def extraer_dosis(nombre_medicion):
     partes = nombre_medicion.strip().split("_")
