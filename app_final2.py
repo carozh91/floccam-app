@@ -372,20 +372,22 @@ def estilizar_grafico(fig, ax, titulo, xlabel="Tiempo (s)", ylabel=None):
     fig.tight_layout()
     return fig
 
-
-# Mostrar logo en esquina superior izquierda con espacio
+# --- Encabezado minimal: solo logo a la izquierda (sin banner) ---
 st.markdown(f"""
-    <div style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
-        <img src="data:image/png;base64,{logo_base64}" width="110">
-    </div>
-    <br><br><br>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-    <div style='background-color:#009739; padding: 20px 10px; border-radius: 8px; text-align: center'>
-        <h1 style='color: white; margin: 0;'>Análisis de Floculación</h1>
-    </div>
-    <br>
+<style>
+.app-topbar {{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 14px 0;
+}}
+.app-topbar img {{
+  height: 48px;            /* Ajusta si lo quieres más grande/pequeño */
+}}
+</style>
+<div class="app-topbar">
+  {f'<img src="data:image/png;base64,{logo_b64}" alt="EPM" />' if logo_b64 else ''}
+</div>
 """, unsafe_allow_html=True)
 
 
