@@ -151,7 +151,7 @@ def bootstrap_historico_indexes():
 
 def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_password=None):
     """Lectura de imágenes desde BD, tolerante para TVD por patrón de filename."""
-    import re as _re
+    
     # Resolver password de forma explícita y SIEMPRE usar get_db_connection
     mysql_pwd = mysql_password if mysql_password is not None else st.session_state.get("mysql_password", None)
     conn = get_db_connection(mysql_pwd)
@@ -160,7 +160,7 @@ def cargar_graficos_db(planta, fecha, tipo=None, nombre_medicion=None, mysql_pas
     cur = conn.cursor()
 
     def _safe(s: str) -> str:
-        return _re.sub(r"\W+", "_", (s or "").lower()).strip("_")
+        return re.sub(r"\W+", "_", (s or "").lower()).strip("_")
 
     # Caso especial: TVD con nombre, tolerante al tipo
     if tipo == 'tiempo_vs_diametro' and nombre_medicion is not None:
