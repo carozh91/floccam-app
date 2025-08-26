@@ -284,4 +284,12 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
 
 
 
+/* Botón para colapsar/expandir la barra lateral */
+.side-toggle {
+  color: var(--epm-green, #009739) !important;
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+}
+
 
