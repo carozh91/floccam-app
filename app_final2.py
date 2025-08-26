@@ -844,7 +844,7 @@ with tab_procesamiento:
 
             cursor.close()
             conn.close()
-    nav_buttons("📝 Ingreso de información", "📈 Comparativos")
+        nav_buttons("📝 Ingreso de información", "📈 Comparativos")
 
 # 📈 COMPARATIVOS
 with tab_comparativos:
@@ -956,12 +956,12 @@ with tab_comparativos:
                 )
                 st.pyplot(fig5)
                 store_fig_in_memory(fig5, f"grafico_floculante_vs_deltaD_dc_{dc}_{planta_actual}_{fecha_str}.png")
-
+    
 
 
     else:
         st.warning("⚠️ Aún no se ha procesado ninguna medición. Procesa datos en la pestaña 'Procesamiento'.")
-
+    nav_buttons("🔬 Procesamiento", "📊 Otros gráficos")
 
 # 📉 OTROS GRÁFICOS
 with tab_graficos:
