@@ -839,7 +839,7 @@ with tab_procesamiento:
             store_csv_in_memory(df_resumen_db, csv_name)
 
             st.info("📁 Resumen guardado temporalmente en memoria. Usa la pestaña '💾 Guardar información' para persistir el proyecto.")
-
+    nav_buttons("📝 Ingreso de información", "📈 Comparativos")
 
 
             cursor.close()
