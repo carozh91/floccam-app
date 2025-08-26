@@ -54,6 +54,16 @@ def jump_to_tab(tab_label: str):
     </script>
     """, height=0, width=0)
 
+def nav_buttons(prev_label: str | None, next_label: str | None):
+    col_prev, _, col_next = st.columns([1, 8, 1])
+    with col_prev:
+        if prev_label and st.button("◀ Anterior", use_container_width=True):
+            jump_to_tab(prev_label)
+    with col_next:
+        if next_label and st.button("Siguiente ▶", use_container_width=True):
+            jump_to_tab(next_label)
+
+
 # === Cargar estilos EPM desde archivo CSS ===
 def local_css(path: str):
     try:
@@ -645,12 +655,7 @@ with tab_ingreso:
         st.session_state["fecha_analisis"] = fecha_analisis
         st.session_state["notas"] = notas
         st.session_state["accion"] = accion
-    # --- Navegación: ir a la siguiente pestaña ---
-    st.markdown("<hr>", unsafe_allow_html=True)
-    _, _, next_col = st.columns([6, 4, 2])
-    with next_col:
-        if st.button("Siguiente ▶", key="next_from_ingreso"):
-            st.session_state["goto_tab"] = "🔬 Procesamiento"  # debe coincidir EXACTO con el label de la pestaña
+    nav_buttons(None, "🔬 Procesamiento") 
 
     
 
