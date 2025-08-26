@@ -35,6 +35,22 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Personaliza el botón que colapsa la barra lateral
+components.html(
+    """
+    <script>
+    const toggle = window.parent.document.querySelector('button[data-testid="collapsedControl"]');
+    if (toggle) {
+      toggle.classList.add('side-toggle');
+      toggle.textContent = '📊';
+      toggle.title = 'Mostrar/ocultar barra lateral';
+    }
+    </script>
+    """,
+    height=0,
+    width=0,
+)
+
 def jump_to_tab(tab_label: str):
     """Hace click en la pestaña cuyo texto (label) coincida exactamente."""
     components.html(f"""
