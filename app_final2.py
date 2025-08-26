@@ -70,14 +70,25 @@ def jump_to_tab(tab_label: str):
     </script>
     """, height=0, width=0)
 
-def nav_buttons(prev_label: str | None, next_label: str | None):
+
+if st.session_state.get("goto_tab"):
+    jump_to_tab(st.session_state.pop("goto_tab"))
+
+def nav_buttons(prev_tab: str | None, next_tab: str | None):
     col_prev, _, col_next = st.columns([1, 8, 1])
+
     with col_prev:
-        if prev_label and st.button("◀ Anterior", use_container_width=True):
-            jump_to_tab(prev_label)
+        if prev_tab and st.button("◀ Anterior", use_container_width=True,
+                                  key=f"prev_{prev_tab}"):
+            st.session_state["goto_tab"] = prev_tab
+            st.experimental_rerun()
+
     with col_next:
-        if next_label and st.button("Siguiente ▶", use_container_width=True):
-            jump_to_tab(next_label)
+        if next_tab and st.button("Siguiente ▶", use_container_width=True,
+                                  key=f"next_{next_tab}"):
+            st.session_state["goto_tab"] = next_tab
+            st.experimental_rerun()
+
 
 
 # === Cargar estilos EPM desde archivo CSS ===
