@@ -333,23 +333,6 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
   border-color:#009739; color:#0f5132; font-weight:600;
 }
 
-/* Botones Anterior/Siguiente compactos — SOLO dentro del contenedor .nav-footer */
-.nav-footer :is(div[data-testid="stButton"], .stButton) > button{
-  font-size: 0.80rem !important;   /* tipografía más pequeña */
-  line-height: 1.1 !important;
-  white-space: nowrap !important;  /* evita 2 renglones */
-  padding: 4px 10px !important;    /* más compacto */
-  min-height: 30px !important;
-}
 
-/* (Opcional) Barra sticky al fondo de la pestaña */
-.nav-footer{
-  position: sticky;
-  bottom: 0;
-  background: #ffffff;
-  padding: 8px 0 6px;
-  border-top: 1px solid #e6f6ec;
-  z-index: 5;
-}
 
 
