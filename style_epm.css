@@ -177,7 +177,7 @@ details[open] > summary::before {
 }
 
 /* === Layout helpers movidos desde app_final2.py === */
-:root { --base-font-size: 18px; }
+:root { --base-font-size: 16px; }
 html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-size); }
 
 .block-container {
