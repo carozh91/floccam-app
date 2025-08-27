@@ -75,23 +75,27 @@ if st.session_state.get("goto_tab"):
     jump_to_tab(st.session_state.pop("goto_tab"))
 
 def nav_buttons(prev_tab: str | None, next_tab: str | None):
+    # Barra pegada al fondo para navegación entre pestañas
+    st.markdown('<div class="nav-footer">', unsafe_allow_html=True)
+
     col_prev, _, col_next = st.columns([1, 8, 1])
 
     with col_prev:
-        if prev_tab and st.button("◀ Anterior", use_container_width=True,
-                                  key=f"prev_{prev_tab}"):
-            st.session_state["goto_tab"] = prev_tab
-            st.experimental_rerun()
+        if prev_tab:
+            # claves únicas y estables por pestaña (evita conflictos por emojis/espacios)
+            if st.button("◀ Anterior", use_container_width=True, key=f"nav_prev_{hash(prev_tab)}"):
+                st.session_state["goto_tab"] = prev_tab
+                st.experimental_rerun()
 
     with col_next:
-        if next_tab and st.button("Siguiente ▶", use_container_width=True,
-                                  key=f"next_{next_tab}"):
-            st.session_state["goto_tab"] = next_tab
-            st.experimental_rerun()
+        if next_tab:
+            if st.button("Siguiente ▶", use_container_width=True, key=f"nav_next_{hash(next_tab)}"):
+                st.session_state["goto_tab"] = next_tab
+                st.experimental_rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
-
-# === Cargar estilos EPM desde archivo CSS ===
 def local_css(path: str):
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -562,16 +566,31 @@ columnas_mediciones = [
 
 # --- Barra lateral: Estado del sistema + Acciones rápidas + Consejos ---
 with st.sidebar:
-    st.markdown("### Estado del sistema")
+    # ==== Proyecto actual (resumen) ====
+    st.markdown("### Proyecto actual")
+    planta_sidebar = st.session_state.get("planta", "—")
+    fecha_sidebar = st.session_state.get("fecha_analisis", "—")
+    notas_sidebar = (st.session_state.get("notas", "") or "").strip()
+    if len(notas_sidebar) > 120:
+        notas_sidebar = notas_sidebar[:117] + "..."
 
-    # Pill helper simple (colores EPM-ish)
+    st.markdown(
+        f"""
+        <div class="sidebar-card">
+          <div class="row"><span class="k">Planta</span><span class="v">{planta_sidebar or "—"}</span></div>
+          <div class="row"><span class="k">Fecha</span><span class="v">{fecha_sidebar}</span></div>
+          <div class="row"><span class="k">Notas</span><span class="v">{notas_sidebar or "—"}</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ==== Estado BD como pill ====
     def _pill(text, bg="#E3F6ED", fg="#0F7B3B"):
         st.markdown(
-            f"<span style='background:{bg}; color:{fg}; padding:4px 10px; border-radius:12px; font-size:0.85em; display:inline-block;'>{text}</span>",
+            f"<span class='pill' style='background:{bg}; color:{fg};'>{text}</span>",
             unsafe_allow_html=True,
         )
-
-    # 🔌 Salud de la BD (prueba rápida)
     ok_db = False
     try:
         _pwd = st.session_state.get("mysql_password", None)
@@ -585,31 +604,50 @@ with st.sidebar:
     except Exception:
         ok_db = False
 
+    st.markdown("### Estado")
     if ok_db:
         _pill("BD conectada")
     else:
         _pill("BD desconectada", bg="#FDECEC", fg="#B3261E")
 
-    # Resumen rápido de sesión
-    st.write(f"🖼️ Gráficos en memoria: **{len(st.session_state.get('graficos_temp', {}))}**")
-    st.write(f"📄 CSVs en memoria: **{len(st.session_state.get('csvs_temp', {}))}**")
-
-    st.markdown("---")
-    st.markdown("### Acciones rápidas")
-    if st.button("🧹 Limpiar temporales", use_container_width=True):
-        st.session_state.pop("graficos_temp", None)
-        st.session_state.pop("csvs_temp", None)
-        st.session_state.pop("df_resumen_db", None)
-        st.success("Temporales limpiados.")
-
-    st.markdown("---")
-    with st.expander("💡 Consejos y atajos"):
+    # ==== Progreso del flujo ====
+    st.markdown("### Progreso")
+    pasos = [
+        ("📝 Ingreso", bool(st.session_state.get("archivos"))),
+        ("🔬 Procesamiento", bool(st.session_state.get("df_resumen")) or bool(st.session_state.get("procesado"))),
+        ("📈 Comparativos", bool(st.session_state.get("df_resumen"))),
+        ("📊 Otros", True),   # visible siempre; se requiere pass de credenciales si es local
+        ("💾 Guardar", bool(st.session_state.get("df_resumen_db"))),
+        ("📂 Históricos", True),
+    ]
+    st.markdown("<div class='sidebar-steps'>", unsafe_allow_html=True)
+    for nombre, ok in pasos:
         st.markdown(
-            "- Desplaza la barra de pestañas ↔ para ver más secciones.\n"
-            "- En **Históricos**, puedes eliminar mediciones y sus gráficos asociados.\n"
-            "- Los **gráficos** y **CSV** se guardan cuando confirmas en **Guardar información**.\n"
-            "- Si el logo se viera recortado, actualiza la página (F5)."
+            f"<div class='step {'ok' if ok else ''}'>{'✅' if ok else '☐'} {nombre}</div>",
+            unsafe_allow_html=True,
         )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ==== Acciones ====
+    st.markdown("### Acciones")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🧹 Limpiar", key="act_limpiar", use_container_width=True):
+            st.session_state.pop("graficos_temp", None)
+            st.session_state.pop("csvs_temp", None)
+            st.session_state.pop("df_resumen", None)
+            st.session_state.pop("df_resumen_db", None)
+            st.success("Temporales limpiados.")
+
+    with c2:
+        if st.button("➡️ Ir a Guardar", key="act_ir_guardar", use_container_width=True):
+            st.session_state["goto_tab"] = "💾 Guardar información"
+            st.experimental_rerun()
+
+    # Saltos rápidos
+    if st.button("📂 Ver Históricos", key="act_ir_hist", use_container_width=True):
+        st.session_state["goto_tab"] = "📂 Históricos"
+        st.experimental_rerun()
 
 
 # --- Tabs principales 

@@ -292,4 +292,45 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
   font-size: 1.4rem;
 }
 
+/* === Barra de navegación sticky en tabs === */
+.nav-footer{
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  padding: 10px 0 6px;
+  border-top: 1px solid #e6f6ec;
+  z-index: 5;
+}
+
+/* === Tarjeta compacta en sidebar === */
+.sidebar-card{
+  background:#f9fffa;
+  border:1.5px solid #009739;
+  border-radius:12px;
+  padding:10px 12px;
+  margin-bottom:10px;
+}
+.sidebar-card .row{
+  display:flex; justify-content:space-between; gap:8px;
+  padding:4px 0; border-bottom:1px dashed #d7eee2;
+}
+.sidebar-card .row:last-child{ border-bottom:none; }
+.sidebar-card .k{ font-weight:700; color:#009739; }
+.sidebar-card .v{ color:#0f5132; }
+
+/* pill reutilizable */
+.pill{
+  display:inline-block; padding:4px 10px; border-radius:12px; font-size:0.85em;
+}
+
+/* Pasos/progreso */
+.sidebar-steps{ display:flex; flex-direction:column; gap:6px; }
+.sidebar-steps .step{
+  background:#f2fdf5; border:1px solid #cce9da; border-radius:10px;
+  padding:6px 10px; color:#0f5132;
+}
+.sidebar-steps .step.ok{
+  border-color:#009739; color:#0f5132; font-weight:600;
+}
+
 
