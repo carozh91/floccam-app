@@ -78,7 +78,7 @@ def nav_buttons(prev_tab: str | None, next_tab: str | None):
     # Barra pegada al fondo para navegación entre pestañas
     st.markdown('<div class="nav-footer">', unsafe_allow_html=True)
 
-    col_prev, _, col_next = st.columns([1, 8, 1])
+    col_prev, _, col_next = st.columns([2, 8, 2])
 
     with col_prev:
         if prev_tab:
