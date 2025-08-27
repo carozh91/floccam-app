@@ -893,7 +893,7 @@ with tab_procesamiento:
 
             cursor.close()
             conn.close()
-        nav_buttons("📝 Ingreso de información", "📈 Comparativos")
+    nav_buttons("📝 Ingreso de información", "📈 Comparativos")
 
 # 📈 COMPARATIVOS
 with tab_comparativos:
@@ -1088,6 +1088,7 @@ with tab_graficos:
 
         cursor.close()
         conn.close()
+    nav_buttons("📈 Comparativos", "💾 Guardar información")
 
 # 💾 GUARDAR INFORMACIÓN
 with tab_guardar:
@@ -1225,7 +1226,7 @@ with tab_guardar:
                 st.success("🚫 El análisis actual ha sido eliminado.")
     else:
         st.info("ℹ️ No hay análisis procesado actualmente.")
-
+    nav_buttons("📊 Otros gráficos", "📂 Históricos")
 
 # 📜 HISTÓRICOS
 with tab_historicos:
@@ -1382,7 +1383,7 @@ with tab_historicos:
         conn.close()
     else:
         st.error("❌ No se pudo conectar a la base de datos. Verifica la configuración de conexión.")
-
+    nav_buttons("💾 Guardar información", None)
 st.markdown("""
     <hr style="margin-top: 2em; margin-bottom: 1em;">
     <div style="text-align: center; font-size: 0.9em; color: #555;">
