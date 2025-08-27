@@ -335,10 +335,10 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
 
 /* Botones Anterior/Siguiente (solo dentro de .nav-footer) */
 .nav-footer :is(div[data-testid="stButton"], .stButton) > button{
-  font-size: 0.80rem !important;   /* fuerza el tamaño */
+  font-size: 0.6rem !important;   /* fuerza el tamaño */
   line-height: 1.1 !important;
   white-space: nowrap !important;  /* evita salto a 2 renglones */
-  padding: 4px 10px !important;    /* más compacto */
+  padding: 2px 6px !important;    /* más compacto */
   min-height: 30px !important;
 }
 
