@@ -71,9 +71,6 @@ def jump_to_tab(tab_label: str):
     """, height=0, width=0)
 
 
-if st.session_state.get("goto_tab"):
-    jump_to_tab(st.session_state.pop("goto_tab"))
-
 def nav_buttons(prev_tab: str | None, next_tab: str | None):
     st.markdown('<div class="nav-footer">', unsafe_allow_html=True)
     col_prev, _, col_next = st.columns([2.2, 7.6, 2.2])
@@ -84,9 +81,8 @@ def nav_buttons(prev_tab: str | None, next_tab: str | None):
                 st.session_state["goto_tab"] = prev_tab
                 try:
                     st.rerun()
-                except Exception:
-                    st.experimental_rerun()
-                return  # corta ejecución tras rerun
+                finally:
+                    return
 
     with col_next:
         if next_tab:
@@ -94,12 +90,10 @@ def nav_buttons(prev_tab: str | None, next_tab: str | None):
                 st.session_state["goto_tab"] = next_tab
                 try:
                     st.rerun()
-                except Exception:
-                    st.experimental_rerun()
-                return
+                finally:
+                    return
 
     st.markdown('</div>', unsafe_allow_html=True)
-
 
 
 def local_css(path: str):
