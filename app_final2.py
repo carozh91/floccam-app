@@ -72,6 +72,18 @@ def jump_to_tab(tab_label: str):
 
 
 def nav_buttons(prev_tab: str | None, next_tab: str | None):
+    st.markdown("""
+    <style>
+    .nav-footer :is(.stButton, div[data-testid="stButton"]) > button,
+    .nav-footer .stButton button{
+      font-size: 0.78rem !important;
+      line-height: 1.1 !important;
+      white-space: nowrap !important;
+      padding: 4px 10px !important;
+      min-height: 28px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     st.markdown('<div class="nav-footer">', unsafe_allow_html=True)
     col_prev, _, col_next = st.columns([2.2, 7.6, 2.2])
 
