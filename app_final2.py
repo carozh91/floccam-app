@@ -76,10 +76,10 @@ def nav_buttons(prev_tab: str | None, next_tab: str | None):
     <style>
     .nav-footer :is(.stButton, div[data-testid="stButton"]) > button,
     .nav-footer .stButton button{
-      font-size: 0.78rem !important;
+      font-size: 0.6rem !important;
       line-height: 1.1 !important;
       white-space: nowrap !important;
-      padding: 4px 10px !important;
+      padding: 4px 6px !important;
       min-height: 28px !important;
     }
     </style>
