@@ -333,14 +333,15 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
   border-color:#009739; color:#0f5132; font-weight:600;
 }
 
-/* === Botones Anterior/Siguiente compactos === */
-.nav-footer [data-testid="stButton"] > button{
-  font-size: 0.8rem;          /* más pequeño */
-  line-height: 1.15;           /* compacto sin aplastar */
-  white-space: nowrap;         /* NO partir en 2 renglones */
-  padding: 4px 10px;           /* menos alto/ancho */
-  min-height: 32px;            /* consistente */
+/* Botones Anterior/Siguiente (solo dentro de .nav-footer) */
+.nav-footer :is(div[data-testid="stButton"], .stButton) > button{
+  font-size: 0.80rem !important;   /* fuerza el tamaño */
+  line-height: 1.1 !important;
+  white-space: nowrap !important;  /* evita salto a 2 renglones */
+  padding: 4px 10px !important;    /* más compacto */
+  min-height: 30px !important;
 }
+
 
 /* En pantallas angostas, aún más pequeño */
 @media (max-width: 1200px){
