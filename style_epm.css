@@ -323,16 +323,18 @@ html, body, [data-testid="stAppViewContainer"] * { font-size: var(--base-font-si
   display:inline-block; padding:4px 10px; border-radius:12px; font-size:0.85em;
 }
 
-/* Pasos/progreso */
-.sidebar-steps{ display:flex; flex-direction:column; gap:6px; }
-.sidebar-steps .step{
-  background:#f2fdf5; border:1px solid #cce9da; border-radius:10px;
-  padding:6px 10px; color:#0f5132;
-}
-.sidebar-steps .step.ok{
-  border-color:#009739; color:#0f5132; font-weight:600;
-}
 
+/* --- Navegación Anterior/Siguiente --- */
+.nav-footer { margin-top: 10px; }
+
+.nav-footer .stButton > button,
+.nav-footer div[data-testid="stButton"] > button {
+  font-size: 0.82rem !important;   /* más pequeño solo aquí */
+  padding: 4px 10px !important;     /* más apretado */
+  min-height: 28px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;   /* evita que el texto se parta */
+}
 
 
 

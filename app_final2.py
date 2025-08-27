@@ -72,40 +72,23 @@ def jump_to_tab(tab_label: str):
 
 
 def nav_buttons(prev_tab: str | None, next_tab: str | None):
-    st.markdown("""
-    <style>
-    .nav-footer :is(.stButton, div[data-testid="stButton"]) > button,
-    .nav-footer .stButton button{
-      font-size: 0.6rem !important;
-      line-height: 1.1 !important;
-      white-space: nowrap !important;
-      padding: 4px 6px !important;
-      min-height: 28px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # contenedor para aplicar estilos específicos
     st.markdown('<div class="nav-footer">', unsafe_allow_html=True)
-    col_prev, _, col_next = st.columns([2.2, 7.6, 2.2])
+
+    col_prev, _, col_next = st.columns([1.5, 7, 1.5])
 
     with col_prev:
-        if prev_tab:
-            if st.button("◀ Anterior", use_container_width=True, key=f"nav_prev_{hash(prev_tab)}"):
-                st.session_state["goto_tab"] = prev_tab
-                try:
-                    st.rerun()
-                finally:
-                    return
+        if prev_tab and st.button("◀ Anterior", use_container_width=True, key=f"prev_{prev_tab}"):
+            st.session_state["goto_tab"] = prev_tab
+            st.rerun()
 
     with col_next:
-        if next_tab:
-            if st.button("Siguiente ▶", use_container_width=True, key=f"nav_next_{hash(next_tab)}"):
-                st.session_state["goto_tab"] = next_tab
-                try:
-                    st.rerun()
-                finally:
-                    return
+        if next_tab and st.button("Siguiente ▶", use_container_width=True, key=f"next_{next_tab}"):
+            st.session_state["goto_tab"] = next_tab
+            st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
+
 
 
 def local_css(path: str):
