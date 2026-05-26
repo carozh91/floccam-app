@@ -105,25 +105,35 @@ local_css("style_epm.css")
 def get_db_connection(mysql_password=None):
     """
     Devuelve una conexión mysql.connector.connect.
-    - Si st.secrets['mysql'] existe (Streamlit Cloud / .streamlit/secrets.toml), lo usa.
+    - Si hay variables de entorno MYSQL_*, las usa (Docker / VPS / hosting).
     - Si no, hace fallback a localhost usando mysql_password (uso local).
     """
-    try:
-        cfg = st.secrets["mysql"]
-        host = cfg.get("host"); user = cfg.get("user")
-        password = cfg.get("password"); database = cfg.get("database")
-        port = int(cfg.get("port")) if cfg.get("port") else 3306
+    env_host = os.getenv("MYSQL_HOST")
+    env_user = os.getenv("MYSQL_USER")
+    env_password = os.getenv("MYSQL_PASSWORD")
+    env_database = os.getenv("MYSQL_DATABASE")
+    env_port = int(os.getenv("MYSQL_PORT", "3306"))
+    if env_host and env_user and env_password and env_database:
         return mysql.connector.connect(
-            host=host, user=user, password=password, database=database, port=port
+            host=env_host,
+            user=env_user,
+            password=env_password,
+            database=env_database,
+            port=env_port,
         )
-    except Exception:
-        return mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password=mysql_password or "Emanuel10*",
-            database="mediciones_db",
-            port=3306,
-        )
+
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password=mysql_password or "Emanuel10*",
+        database="mediciones_db",
+        port=3306,
+    )
+
+
+def has_configured_db():
+    required = ("MYSQL_HOST", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE")
+    return all(os.getenv(key) for key in required)
 
 def bootstrap_graficos_table():
     ddl = """
@@ -688,12 +698,9 @@ with tab_ingreso:
             del st.session_state[key]
         st.experimental_rerun()
 
-        # Contraseña (solo para uso local). En producción se utilizará st.secrets.
+        # Contraseña solo para uso local sin Docker.
     mysql_password = st.text_input("🔐 Contraseña de MySQL (solo local)", type="password")
-    try:
-        secrets_present = "mysql" in st.secrets
-    except Exception:
-        secrets_present = False
+    db_configured = has_configured_db()
 
 
     planta = st.text_input("🏭 Nombre de la planta")
@@ -702,10 +709,10 @@ with tab_ingreso:
     archivos = st.file_uploader("📁 Subir archivo(s) CSV", type="csv", accept_multiple_files=True)
     accion = st.radio("¿Qué hacer con los datos anteriores?", ["Conservar", "Eliminar todo antes de cargar"])
 
-    # Permitir iniciar procesamiento si se ingresó contraseña local o si hay st.secrets en producción
-    if st.button("🚀 Iniciar procesamiento") and (mysql_password or secrets_present) and archivos:
+    # Permitir iniciar procesamiento si se ingresó contraseña local o si hay DB configurada por entorno.
+    if st.button("🚀 Iniciar procesamiento") and (mysql_password or db_configured) and archivos:
         st.session_state["procesado"] = True
-        # Guardar la contraseña en sesión SOLO si se ingresó (para local). En producción, st.secrets es usado.
+        # Guardar la contraseña en sesión SOLO si se ingresó para uso local.
         if mysql_password:
             st.session_state["mysql_password"] = mysql_password
         else:
@@ -1011,33 +1018,12 @@ with tab_comparativos:
 with tab_graficos:
     st.subheader("📉 Visualización por variable")
 
-    # Verificar si hay secrets (producción)
+    mysql_password = st.session_state.get("mysql_password", None)
     try:
-        secrets_present = "mysql" in st.secrets
+        conn = get_db_connection(mysql_password)
     except Exception:
-        secrets_present = False
-
-    if secrets_present:
-        conn = mysql.connector.connect(
-            host=st.secrets["mysql"]["host"],
-            user=st.secrets["mysql"]["user"],
-            password=st.secrets["mysql"]["password"],
-            database=st.secrets["mysql"]["database"],
-            port=st.secrets["mysql"]["port"]
-        )
-    else:
-        mysql_password = st.session_state.get("mysql_password", "")
-        if mysql_password:
-            conn = mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password=mysql_password,
-                database="mediciones_db",
-                port=3306
-            )
-        else:
-            st.warning("🔑 Ingresa tu contraseña en la pestaña 'Ingreso de información' para acceder a esta sección.")
-            conn = None
+        st.warning("🔑 Ingresa tu contraseña en la pestaña 'Ingreso de información' o configura la base de datos.")
+        conn = None
 
     if conn:
         cursor = conn.cursor()
@@ -1123,7 +1109,7 @@ with tab_guardar:
                     # Conexión flexible
                     conn = get_db_connection(mysql_pwd)
                     if not conn:
-                        st.error("No se pudo establecer la conexión. Ingresa la contraseña local o configura `st.secrets` en producción.")
+                        st.error("No se pudo establecer la conexión. Ingresa la contraseña local o configura las variables MYSQL_*.")
                         st.stop()
 
                     # ¿Ya existe histórico de esa planta y fecha?
